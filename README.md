@@ -59,10 +59,11 @@ python bot.py
    Para trocar de grupo (ou enviar a uma pessoa só) depois, basta trocar esse número e salvar.
 3. Cadastre os IDs de quem vai usar em `ALLOWED_USER_IDS` (veja "Quem pode usar").
 
-> **Onde rodar:** o bot precisa estar ligado na hora do fechamento. O computador do
-> restaurante tende a ser desligado justamente nessa hora (é uma etapa do checklist!),
-> então o ideal é um servidor pequeno sempre ligado (VPS barata, Raspberry Pi, etc.).
-> O bot usa *polling*, então não precisa de IP fixo nem de domínio.
+> **Onde rodar:** o bot precisa estar ligado na hora do fechamento. No Divino Fogão ele roda num
+> **notebook Windows dedicado** (sempre na tomada e no Wi-Fi). O passo a passo para deixá-lo
+> iniciando sozinho, sem suspender e voltando se travar está em
+> [`docs/guia-servidor-windows.md`](docs/guia-servidor-windows.md) (scripts em `servidor/`).
+> O bot usa *polling*: não precisa de IP fixo, domínio nem abrir portas no roteador.
 
 ## Configurando checklists e lojas
 
@@ -114,6 +115,16 @@ fechamento/
 lojas/                  # dados de cada loja
 tests/                  # pytest
 ```
+
+## Documentação
+
+- [`docs/guia-servidor-windows.md`](docs/guia-servidor-windows.md): instalar e manter o bot no notebook do restaurante.
+- [`docs/guia-venda.md`](docs/guia-venda.md): o que é preciso para oferecer o sistema a outros clientes.
+
+## Logs
+
+Os logs ficam em `logs/bot.log` (rotação automática, ~6 MB no máximo). O token do bot **não** é
+escrito neles.
 
 ## Testes
 

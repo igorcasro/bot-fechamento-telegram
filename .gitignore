@@ -5,3 +5,4 @@ __pycache__/
 estado.pickle
 arquivo/
 .pytest_cache/
+logs/

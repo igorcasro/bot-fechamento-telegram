@@ -27,6 +27,9 @@ fechamento/
   loja.py              # Loja: nome, local, fuso, logo, checklists
   entrega.py           # CanalEntrega (Protocol); TelegramEntrega está em bot.py
 lojas/<id>/            # dados da loja: loja.yaml, logo.png, checklists/<tipo>.yaml
+servidor/              # scripts Windows: iniciar-bot.bat (laço de reinício), instalar/desinstalar
+                       # (tarefa agendada + energia), atualizar.bat (git pull + reinício)
+docs/                  # guia-servidor-windows.md e guia-venda.md
 tests/                 # pytest (lógica, PDFs e fluxo completo dos handlers)
 ```
 
@@ -76,8 +79,19 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   `abertura`->`/abrir`, outros usam o nome do tipo). Comandos dinâmicos (`cmd_dinamico`), então
   um novo YAML funciona sem reiniciar. A sessão guarda uma **cópia** do checklist: editar o YAML
   no meio de um checklist em andamento não afeta ele.
-- **Servidor**: o bot vai rodar num notebook antigo do colega do usuário, deixado no restaurante.
-  (Ainda falta definir o sistema operacional e como iniciar o bot automaticamente.)
+- **Servidor**: notebook **Windows** dedicado no restaurante, sempre na tomada e no Wi-Fi.
+  `servidor/instalar-windows.ps1` cria uma tarefa agendada `BotChecklistRestaurante` (ao ligar o
+  Windows, como SYSTEM, sem login) que roda `iniciar-bot.bat` (reinicia o bot em 15 s se ele
+  encerrar) e ajusta a energia (sem suspender; tampa fechada não faz nada). Python deve estar
+  instalado **para todos os usuários** (SYSTEM não usa o da Microsoft Store). `run_polling` usa
+  `bootstrap_retries=-1` para esperar o Wi-Fi ao ligar. Logs em `logs/` (rotação).
+  **Esses scripts nunca foram executados em Windows** (desenvolvidos em Linux): ao receber relato
+  de problema, trate-os como não verificados. Nunca use `timeout` em `.bat` de tarefa agendada
+  (falha sem console); use `ping`.
+- Dado o httpx logar a URL com o **token** em nível INFO, `fechamento/logs.py` silencia
+  `httpx`/`httpcore`. Não reative esses logs.
+- Possível venda a terceiros: ver `docs/guia-venda.md` (propriedade com o colega e o restaurante,
+  marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
   o usuário vai editar depois, incluindo dias e atividades.
 - Resumo + PDF vão para **um grupo** do Telegram por enquanto (`MANAGER_CHAT_ID`); pode
@@ -131,8 +145,8 @@ pytest                   # testes
 
 ## Pendências em aberto
 
-- **Servidor**: notebook antigo no restaurante (decidido). Falta saber o sistema operacional,
-  como iniciar o bot sozinho ao ligar/reiniciar, impedir suspensão e queda de energia/Wi-Fi.
+- Validar os scripts do `servidor/` num Windows real (reinício sem login, queda do processo,
+  tampa fechada) e ajustar o guia conforme o resultado.
 - Logo em `lojas/divino-fogao/logo.png` tem só ~300 px de largura (sai levemente
   serrilhada no PDF); trocar por uma versão maior quando houver.
 - Checklist de **abertura** e checklists por dia: o usuário vai fornecer.

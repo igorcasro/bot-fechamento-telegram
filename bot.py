@@ -27,6 +27,7 @@ from telegram.ext import (
 from fechamento.arquivo import Arquivo
 from fechamento.checklist import FOTO_NENHUMA, FOTO_OBRIGATORIA, Checklist
 from fechamento.entrega import CanalEntrega
+from fechamento import logs
 from fechamento.loja import Loja
 from fechamento.pdf import gerar_lista_pdf, gerar_relatorio_pdf
 from fechamento.relatorio import ICONE, ROTULO, data_br, progresso_texto, resumo_texto
@@ -679,7 +680,7 @@ def build_app(token: str, ctx: Contexto) -> Application:
 def main() -> None:
     env = BASE_DIR / ".env"
     load_dotenv(env, encoding=ENV_ENCODING)
-    logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
+    logs.configurar(os.getenv("LOG_DIR", BASE_DIR / "logs"))
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise SystemExit("Defina BOT_TOKEN no arquivo .env (veja .env.example).")
@@ -695,7 +696,13 @@ def main() -> None:
         log.warning("MANAGER_CHAT_ID não definido: relatórios não serão enviados.")
     log.info("Loja: %s | checklists: %s | usuários liberados: %d", ctx.loja.nome,
              ", ".join(ctx.loja.tipos_disponiveis()), len(ctx.permitidos))
-    build_app(token, ctx).run_polling()
+    try:
+        # bootstrap_retries=-1: se o Wi-Fi ainda não conectou ao ligar o notebook, espera e tenta
+        # de novo em vez de encerrar.
+        build_app(token, ctx).run_polling(bootstrap_retries=-1)
+    except Exception:
+        log.exception("O bot parou por um erro inesperado")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
