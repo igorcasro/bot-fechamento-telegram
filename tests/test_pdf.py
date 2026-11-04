@@ -44,3 +44,28 @@ def test_lista_preenchida_destaca_etapas_nao_realizadas(loja, cl, tmp_path, monk
     assert preenchida.count(b"REALIZADA") == 3 and b"3 de 5 etapas" in preenchida
     vazia = gerar_lista_pdf(loja, cl, None, tmp_path / "v.pdf").read_bytes()
     assert b"REALIZADA" not in vazia and b"etapas N" not in vazia
+
+
+def test_fotos_ocupam_cerca_de_um_quarto_da_pagina():
+    """Foto em pé (3:4) fica grande: ~8 cm de largura x ~11 cm de altura, como pedido."""
+    from reportlab.lib.units import cm
+    from fechamento.pdf import _distribuir
+    linhas, total = _distribuir([3 / 4], 12 * cm)
+    (_, larg, alt), = linhas[0]
+    assert 7.5 * cm < larg < 9 * cm and 10 * cm < alt < 12.1 * cm
+    assert total < 13 * cm
+
+
+def test_varias_fotos_na_mesma_etapa_encolhem_para_caber_na_pagina(loja, cl, tmp_path):
+    """Problema com muitas fotos grandes não pode estourar a página (LayoutError)."""
+    s = Sessao.nova(cl, "Arilson Junior", hora(22, 38))
+    (tmp_path / s.pasta / "fotos").mkdir(parents=True)
+    s.responder(cl, Status.PROBLEMA, hora(22, 39))
+    for n in range(9):
+        rel = f"{s.pasta}/fotos/01_{n}.jpg"
+        Image.new("RGB", (1200, 1600), (80, 90, 110)).save(tmp_path / rel)
+        s.add_foto(cl, rel, hora(22, 39))
+    s.continuar(cl)
+    s.finalizar(cl, hora(22, 48))
+    out = gerar_relatorio_pdf(loja, cl, s, tmp_path, tmp_path / "r.pdf", gerado_em=hora(22, 48))
+    assert out.read_bytes().startswith(b"%PDF")

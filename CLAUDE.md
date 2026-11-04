@@ -72,6 +72,10 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   PDF (`TelegramEntrega` usa apenas `send_message` e `send_document`; há teste estrito disso).
   O funcionário recebe só uma confirmação curta; o resumo vai ao grupo (se o envio falhar ou não
   houver grupo, o resumo aparece para o funcionário, para não perder a informação).
+- **Fotos grandes no PDF**: cada foto ocupa cerca de 1/4 da página (largura da coluna, até
+  12 cm de altura; `ALTURA_MAX_FOTO` em `pdf.py`) para dar para ver um problema evidente. Etapas
+  com várias fotos encolhem (`ALTURA_MAX_FOTOS_ETAPA`) para a linha da grade caber numa página.
+  O relatório fica mais longo (cerca de 4 fotos por página).
 - **O grupo pode mudar**: `MANAGER_CHAT_ID` é lido na hora do envio (sem reiniciar); o usuário
   pode trocar de grupo ou mandar para uma pessoa só.
 - **Mais passos e mais checklists**: um YAML por tipo em `lojas/<loja>/checklists/`; o nome do
@@ -140,7 +144,7 @@ python bot.py            # roda o bot (polling)
 pytest                   # testes
 ```
 
-No Windows (PowerShell): `.venv\Scripts\python.exe -m pytest -v`. A suíte (61 testes) foi executada
+No Windows (PowerShell): `.venv\Scripts\python.exe -m pytest -v`. A suíte (63 testes) foi executada
 em Windows 11 com Python 3.13 em 04/11/2026 e passou inteira. Isso cobre só a lógica, os PDFs e os
 handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendências).
 

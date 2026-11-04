@@ -32,7 +32,6 @@ COR_STATUS = {
 }
 MARGEM = 1.8 * cm
 LARGURA = A4[0] - 2 * MARGEM
-ALTURA_MINIATURA = 3.4 * cm
 
 _base = getSampleStyleSheet()["Normal"]
 
@@ -130,49 +129,77 @@ def _barra_secao(nome: str) -> Table:
 
 COL = LARGURA / 2  # largura de cada coluna (duas etapas lado a lado)
 CEL = COL - 0.35 * cm  # largura útil dentro da coluna
-MAX_LARGURA_MINIATURA = 3.9 * cm
+# Fotos grandes o bastante para enxergar um problema no relatório: cada uma ocupa cerca de 1/4 da
+# área útil da página (a coluna tem ~8,7 cm; uma foto em pé de celular fica com ~8,4 x 11 cm).
+ALTURA_MAX_FOTO = 12 * cm
+ALTURA_MAX_FOTOS_ETAPA = 21 * cm  # várias fotos numa etapa encolhem para a linha caber na página
+_ESPACO_FOTO = 8  # pt entre fotos lado a lado
+_ALTURA_LEGENDA = 12  # pt: "Foto às HH:MM" + respiros da tabela
+_LARGURA_INDISPONIVEL, _ALTURA_INDISPONIVEL = 2.5 * cm, 12
 
 
-def _miniatura(caminho: Path) -> tuple[Flowable, float] | None:
-    """Miniatura leve (em memória) para não inflar o PDF; None se a foto não abrir."""
+def _carregar_foto(caminho: Path) -> tuple[io.BytesIO, float] | None:
+    """Foto reduzida (em memória) para não inflar o PDF e a proporção largura/altura.
+
+    1000 px no lado maior bastam para ~12 cm a 200 dpi. None se a foto não abrir.
+    """
     try:
         with PILImage.open(caminho) as im:
             im = ImageOps.exif_transpose(im).convert("RGB")
-            im.thumbnail((600, 600))
+            im.thumbnail((1000, 1000))
             w, h = im.size
             buf = io.BytesIO()
-            im.save(buf, "JPEG", quality=78)
+            im.save(buf, "JPEG", quality=80)
         buf.seek(0)
-        largura = min(ALTURA_MINIATURA * w / h, MAX_LARGURA_MINIATURA)
-        return Image(buf, width=largura, height=largura * h / w), largura
+        return buf, w / h
     except Exception:  # foto apagada/corrompida
         return None
 
 
+def _tamanho_foto(proporcao: float | None, altura_max: float) -> tuple[float, float]:
+    if proporcao is None:
+        return _LARGURA_INDISPONIVEL, _ALTURA_INDISPONIVEL
+    largura = min(altura_max * proporcao, CEL - _ESPACO_FOTO)
+    return largura, largura / proporcao
+
+
+def _distribuir(proporcoes: list[float | None], altura_max: float):
+    """Fotos em linhas que cabem na coluna: ([[(índice, largura, altura)]], altura total)."""
+    linhas: list[list[tuple[int, float, float]]] = []
+    usado = 0.0
+    for i, prop in enumerate(proporcoes):
+        larg, alt = _tamanho_foto(prop, altura_max)
+        if not linhas or usado + larg + _ESPACO_FOTO > CEL:
+            linhas.append([])
+            usado = 0.0
+        linhas[-1].append((i, larg, alt))
+        usado += larg + _ESPACO_FOTO
+    total = sum(max(a for _, _, a in lin) + _ALTURA_LEGENDA for lin in linhas)
+    return linhas, total
+
+
 def _linhas_fotos(resp, base: Path) -> list[Flowable]:
-    """Miniaturas (com a hora embaixo) distribuídas em linhas que cabem na coluna."""
-    itens: list[tuple[Flowable, Flowable, float]] = []
-    for f in resp.fotos:
-        mini = _miniatura(base / f.caminho)
-        corpo, larg = mini if mini else (_p("(foto indisponível)", S_FOTO), 2.5 * cm)
-        itens.append((corpo, _p(f"Foto às {hora(f.hora)}", S_FOTO), larg + 8))
-    linhas: list[list[tuple[Flowable, Flowable, float]]] = []
-    atual, usado = [], 0.0
-    for it in itens:
-        if atual and usado + it[2] > CEL:
-            linhas.append(atual)
-            atual, usado = [], 0.0
-        atual.append(it)
-        usado += it[2]
-    if atual:
-        linhas.append(atual)
+    """Fotos (com a hora embaixo) distribuídas em linhas que cabem na coluna."""
+    fotos = [_carregar_foto(base / f.caminho) for f in resp.fotos]
+    props = [f[1] if f else None for f in fotos]
+    altura = ALTURA_MAX_FOTO
+    linhas, total = _distribuir(props, altura)
+    while total > ALTURA_MAX_FOTOS_ETAPA and altura > 2 * cm:  # muitas fotos: encolhe
+        altura *= 0.9
+        linhas, total = _distribuir(props, altura)
     out: list[Flowable] = []
     for lote in linhas:
-        t = Table([[c[0] for c in lote], [c[1] for c in lote]], hAlign="LEFT",
-                  colWidths=[c[2] for c in lote])
+        corpos, legendas, larguras = [], [], []
+        for i, larg, alt in lote:
+            corpos.append(Image(fotos[i][0], width=larg, height=alt) if fotos[i]
+                          else _p("(foto indisponível)", S_FOTO))
+            legendas.append(_p(f"Foto às {hora(resp.fotos[i].hora)}", S_FOTO))
+            larguras.append(larg + _ESPACO_FOTO)
+        t = Table([corpos, legendas], hAlign="LEFT", colWidths=larguras)
         t.setStyle(TableStyle([
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), _ESPACO_FOTO),
             ("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
         ]))
         out.append(t)

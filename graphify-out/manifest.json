@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "fechamento/pdf.py": {
-    "mtime": 1793824545.271534,
-    "seen": 1793824579.7020445,
-    "ast_hash": "f793ed3121469a824b1a503251f05ec9",
+    "mtime": 1793834861.0371454,
+    "seen": 1793834920.392565,
+    "ast_hash": "9b25c4d77c0fb61433f9ef46ae6e305a",
     "semantic_hash": ""
   },
   "fechamento/relatorio.py": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "tests/test_pdf.py": {
-    "mtime": 1793824558.173648,
-    "seen": 1793824579.702062,
-    "ast_hash": "a3e3a95542bc87fff05db08c27911a76",
+    "mtime": 1793834847.56007,
+    "seen": 1793834920.3925846,
+    "ast_hash": "27a2ea343ac0bd0f52fbfde0e008cdde",
     "semantic_hash": ""
   },
   "tests/test_relatorio_arquivo.py": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793834040.0452428,
-    "seen": 1793834063.2346144,
-    "ast_hash": "4c505b2ef3853c0866ede23612db03f9",
+    "mtime": 1793834902.858395,
+    "seen": 1793834920.3925905,
+    "ast_hash": "260f5753f889f1a534c5846a09747dc5",
     "semantic_hash": ""
   },
   "README.md": {
