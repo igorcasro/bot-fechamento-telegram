@@ -1,0 +1,45 @@
+# Checklist de FECHAMENTO. Edite à vontade; não precisa mexer em código.
+#
+# Por etapa:
+#   titulo, instrucao          texto mostrado ao funcionário
+#   foto: obrigatoria | opcional | nenhuma     (padrão: obrigatoria)
+#   fotos: 2                   quantas fotos (padrão 1)
+#   nao_se_aplica: false       esconde o botão "Não se aplica" (padrão: true)
+#   dias: [seg, ter, qua, qui, sex, sab, dom]  só nesses dias da semana
+#   datas: [2026-12-24]        nessas datas específicas (sem `dias` = SOMENTE nelas)
+#   exceto: [2026-12-25]       não aparece nessas datas
+#
+# Lista inicial: segue o relatório de fechamento de 03/11/2026.
+
+tipo: fechamento
+nome: "Fechamento da Loja"
+
+secoes:
+  - nome: COZINHA
+    etapas:
+      - titulo: "Limpeza das caixas de gordura"
+      - titulo: "Geladeira ligada"
+      - titulo: "Coifa desligada e aberta"
+        foto: opcional
+      - titulo: "Queijo ralado"
+      - titulo: "Batata picada"
+      - titulo: "Carne descongelando"
+      - titulo: "Carne preparada"
+      - titulo: "Chão e ralos limpos"
+      - titulo: "Pias limpas"
+      - titulo: "Fogão desligado"
+      - titulo: "Lixos limpos"
+      - titulo: "Escada limpa"
+      - titulo: "Forno desligado"
+      - titulo: "Louça toda lavada e guardada"
+        foto: opcional
+
+  - nome: ATENDIMENTO
+    etapas:
+      - titulo: "TV desligada"
+      - titulo: "Refresqueira limpa e desligada"
+      - titulo: "Computador desligado"
+      - titulo: "Balança desligada"
+      - titulo: "Buffet desligado"
+      - titulo: "Chão do atendimento limpo"
+      - titulo: "Ar-condicionado desligado"

@@ -1,0 +1,5 @@
+# Dados da loja. Para outra loja, copie esta pasta (lojas/<novo-id>/) e rode com LOJA=<novo-id>.
+nome: "Divino Fogão"
+local: "Shopping Plaza Campos Gerais · Ponta Grossa/PR"
+fuso: "America/Sao_Paulo"
+logo: "logo.png"
