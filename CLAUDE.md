@@ -166,9 +166,9 @@ handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendên
   tampa fechada) e ajustar o guia conforme o resultado.
 - Checklist de **abertura** e checklists por dia: ainda será fornecido/criado manualmente.
 - Página web de acompanhamento (opcional) e lembretes automáticos.
-- Testar com um bot real no Telegram: o usuário está fazendo o primeiro teste
-  (`docs/guia-primeiro-teste.md`). O desenvolvimento aqui foi feito sem rede para o Telegram; os
-  testes usam objetos simulados. Corrigir o que o teste real revelar.
+- Bot real no Telegram: **testado pelo usuário em 04/11/2026** (`/fechar`, `/imprimir`, `/resultado`
+  e o menu "/" funcionaram bem). Os testes automatizados usam objetos simulados; corrigir o que o
+  uso real revelar. Os scripts de `servidor/` ainda dependem do notebook do restaurante (abaixo).
 - Decidir como entregar ao Projeto 1 (ZIP com a configuração fora da pasta do código; ver a
   seção 12 do guia de venda).
 
