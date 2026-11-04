@@ -22,7 +22,8 @@ ao bot, então o `/fechar` recusa e pede a conversa privada).
 
 | Comando | O que faz |
 |---|---|
-| `/fechar`, `/abrir`, `/<comando do checklist>` | inicia um checklist (cada YAML define o seu) |
+| `/fechar`, `/abrir`, `/<comando do checklist>` | inicia um checklist (cada YAML define o seu comando) |
+| `/iniciar <tipo>` | inicia um checklist pelo nome do tipo (ex.: `/iniciar fechamento`) |
 | `/status` | mostra de novo a etapa atual |
 | `/finalizar` | encerra com o que foi feito |
 | `/cancelar` | cancela e **descarta** o checklist e as fotos dele (nada vai ao grupo) |
@@ -46,18 +47,25 @@ Quem for usar `/hoje`, `/resultado` etc. direto no grupo da gerência também pr
 
 ## Rodando
 
+**Primeira vez?** Siga o passo a passo completo em
+[`docs/guia-primeiro-teste.md`](docs/guia-primeiro-teste.md). Resumo:
+
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env      # preencha BOT_TOKEN e MANAGER_CHAT_ID
+cp .env.example .env      # Windows: copy .env.example .env  | preencha o BOT_TOKEN
 python bot.py
 ```
 
+Requer **Python 3.9 ou mais novo** (recomendado 3.11+).
+
 1. Crie o bot com o `@BotFather` (`/newbot`) e coloque o token em `BOT_TOKEN`.
-2. Crie o grupo que receberá os relatórios, adicione o bot e envie `/start` no grupo: ele mostra
-   o **"ID deste chat"** (número negativo). Coloque em `MANAGER_CHAT_ID`.
+2. Rode `python bot.py` e, em conversa privada com o bot, envie `/start`: ele responde com o **seu
+   ID de usuário**. Coloque em `ALLOWED_USER_IDS` e salve o `.env` (sem reiniciar). Sem isso,
+   **ninguém** consegue usar o bot.
+3. Crie o grupo que receberá os relatórios, adicione o bot e envie `/start` no grupo: ele mostra
+   o **"ID deste chat"** (número negativo). Coloque em `MANAGER_CHAT_ID` e salve.
    Para trocar de grupo (ou enviar a uma pessoa só) depois, basta trocar esse número e salvar.
-3. Cadastre os IDs de quem vai usar em `ALLOWED_USER_IDS` (veja "Quem pode usar").
 
 > **Onde rodar:** o bot precisa estar ligado na hora do fechamento. No Divino Fogão ele roda num
 > **notebook Windows dedicado** (sempre na tomada e no Wi-Fi). O passo a passo para deixá-lo
@@ -92,6 +100,10 @@ lojas/
   continuam funcionando.
 - **Outra loja**: copie `lojas/divino-fogao/` para `lojas/<novo-id>/`, ajuste e rode com
   `LOJA=<novo-id>` (um bot/token por loja).
+- **Configuração fora da pasta do código** (recomendado em servidor): copie `lojas/` para outra
+  pasta (ex.: `C:\bot-config\lojas`) e aponte `LOJAS_DIR` no `.env`. Assim, atualizar o código
+  (ZIP ou `git pull`) nunca sobrescreve os checklists editados. O mesmo vale para
+  `ARCHIVE_DIR` e `LOG_DIR`.
 
 ## Dados guardados
 
@@ -112,14 +124,17 @@ fechamento/
   arquivo.py            # fotos, resultado.json e retenção
   loja.py               # configuração por loja
   entrega.py            # interface de canais de entrega (Telegram hoje; WhatsApp depois)
+  logs.py               # log em arquivo com rotação (e sem o token do bot)
 lojas/                  # dados de cada loja
+servidor/               # scripts Windows: iniciar com o PC, reiniciar se cair, atualizar
+docs/                   # guias
 tests/                  # pytest
 ```
 
 ## Documentação
 
+- [`docs/guia-primeiro-teste.md`](docs/guia-primeiro-teste.md): criar o bot e testar tudo no seu computador.
 - [`docs/guia-servidor-windows.md`](docs/guia-servidor-windows.md): instalar e manter o bot no notebook do restaurante.
-- [`docs/guia-venda.md`](docs/guia-venda.md): o que é preciso para oferecer o sistema a outros clientes.
 
 ## Logs
 
@@ -129,6 +144,7 @@ escrito neles.
 ## Testes
 
 ```bash
+pip install -r requirements-dev.txt
 pytest
 ```
 

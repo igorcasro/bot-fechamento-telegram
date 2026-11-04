@@ -1,3 +1,8 @@
 # Scripts do Windows precisam de fim de linha CRLF
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+
+# Fora do pacote gerado com "git archive" (arquivos internos)
+.gitattributes export-ignore
+docs/guia-venda.md export-ignore
+CLAUDE.md export-ignore

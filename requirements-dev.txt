@@ -1,0 +1,3 @@
+# Dependências para desenvolver/testar (o servidor só precisa de requirements.txt)
+-r requirements.txt
+pytest>=8.0

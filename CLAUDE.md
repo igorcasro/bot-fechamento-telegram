@@ -143,11 +143,9 @@ pytest                   # testes
 
 - Validar os scripts do `servidor/` num Windows real (reinício sem login, queda do processo,
   tampa fechada) e ajustar o guia conforme o resultado.
-- Logo em `lojas/divino-fogao/logo.png` tem só ~300 px de largura (sai levemente
-  serrilhada no PDF); trocar por uma versão maior quando houver.
-- Checklist de **abertura** e checklists por dia: o usuário vai fornecer.
+- Logo em `lojas/divino-fogao/logo.png` alterada para a versão utilizada pelo responsável do Projeto 1.
+- Checklist de **abertura** e checklists por dia: ainda será fornecido/criado manualmente.
 - Página web de acompanhamento (opcional) e lembretes automáticos.
-- Envio por WhatsApp.
 - Testar com um bot real no Telegram (o desenvolvimento aqui foi feito sem rede para o
   Telegram; os testes usam objetos simulados).
 

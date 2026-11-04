@@ -27,8 +27,9 @@ Tempo estimado: 40 a 60 minutos, com o notebook conectado à internet.
 | **Acesso ao repositório no GitHub** | O repositório `igorcasro/bot-fechamento-telegram` é **privado**: você precisa ser convidado. |
 | **Conta de administrador no Windows** | Para instalar programas e rodar os scripts. |
 
-> Os passos para criar o bot e descobrir os IDs estão no `README.md`. Se ainda não fez isso,
-> faça primeiro: crie o bot, o grupo e anote o token e os IDs.
+> Os passos para criar o bot e descobrir os IDs estão em
+> [`guia-primeiro-teste.md`](guia-primeiro-teste.md). Se ainda não fez o primeiro teste no seu
+> computador, **faça primeiro**: ele valida o bot antes de você ir ao restaurante.
 
 ---
 
@@ -148,6 +149,27 @@ MANAGER_CHAT_ID=-1001234567890
 Salve com **Ctrl+S**. (Se o Bloco de Notas não deixar salvar, feche e abra de novo com
 **botão direito → Executar como administrador**.)
 
+### Recomendado: separar a configuração do código
+
+Os checklists e a logo ficam na pasta `lojas\`, dentro do projeto. Se você atualizar o bot
+(ZIP ou `git pull`), essa pasta pode ser sobrescrita e **você perde as edições dos checklists**.
+Para evitar, guarde a configuração **fora** da pasta do código:
+
+```bash
+xcopy /E /I C:\bot-fechamento\lojas C:\bot-config\lojas
+notepad C:\bot-fechamento\.env
+```
+
+E acrescente ao `.env`:
+
+```text
+LOJAS_DIR=C:\bot-config\lojas
+```
+
+Daí em diante, **edite os checklists em `C:\bot-config\lojas\...`** e trate a pasta
+`C:\bot-fechamento` como "código: não mexer, só atualizar". Na rotina, a única coisa que se
+edita é o `.env` e os arquivos `.yaml` (valores e textos, nunca os arquivos `.py`).
+
 ---
 
 ## 6. Teste manual (antes de automatizar)
@@ -215,7 +237,7 @@ O script faz três coisas (todas com mensagem `[ok]` ao final):
 2. **Não entre na conta do Windows.** Deixe na tela de login.
 3. Espere uns 3 minutos e envie `/start` ao bot pelo celular.
 
-Se respondeu: está certo. Se **não** respondeu, veja o item "O bot não responde depois de
+Se respondeu: está certo. (Se o Wi-Fi demorar a conectar, o bot tenta de novo a cada 15 segundos até a internet voltar.) Se **não** respondeu, veja o item "O bot não responde depois de
 reiniciar" em *Problemas comuns* (geralmente é o Wi-Fi não conectar antes do login).
 
 ### 8.2 Teste de queda do bot
@@ -239,13 +261,13 @@ resumo e o PDF**, e que **nenhuma foto** apareceu solta na conversa.
 
 | Tarefa | Como fazer |
 |---|---|
-| **Liberar um funcionário** | A pessoa envia `/start` ao bot e manda o número ("Seu ID de usuário") a quem cuida do servidor. Abra `C:\bot-fechamento\.env`, adicione o número em `ALLOWED_USER_IDS` (separado por vírgula) e salve. **Não precisa reiniciar.** No log aparece `.env recarregado`. |
+| **Liberar um funcionário** | A pessoa envia `/start` ao bot e manda o número ("Seu ID de usuário") a quem cuida do servidor. Abra `C:\bot-fechamento\.env`, adicione o número em `ALLOWED_USER_IDS` (separado por vírgula) e salve. **Não precisa reiniciar.** O bot relê o arquivo na **próxima mensagem** que receber, e aí aparece `.env recarregado` no log. |
 | **Remover um funcionário** | Apague o número de `ALLOWED_USER_IDS` e salve. |
 | **Trocar o grupo dos relatórios** | Troque o número em `MANAGER_CHAT_ID` e salve. Também **não precisa reiniciar**. |
-| **Editar etapas do checklist** | Edite `C:\bot-fechamento\lojas\divino-fogao\checklists\fechamento.yaml` (use o Bloco de Notas; o recuo é feito com **espaços, nunca Tab**). Vale para os **próximos** checklists, sem reiniciar. Teste com `/hoje` no Telegram. |
+| **Editar etapas do checklist** | Edite `C:\bot-config\lojas\divino-fogao\checklists\fechamento.yaml` (ou `C:\bot-fechamento\lojas\...`, se não separou a configuração). Use o Bloco de Notas; o recuo é feito com **espaços, nunca Tab**. Vale para os **próximos** checklists, sem reiniciar. Teste com `/hoje` no Telegram. |
 | **Criar outro checklist (ex.: abertura)** | Copie `fechamento.yaml` para `abertura.yaml` na mesma pasta e ajuste. O comando (`/abrir`) funciona na hora. |
 | **Ver o que aconteceu** | `C:\bot-fechamento\logs\bot.log`. O log guarda no máximo ~6 MB (apaga os mais antigos sozinho). |
-| **Atualizar o bot** | Se instalou com Git: clique direito em `servidor\atualizar.bat` → **Executar como administrador**. Com ZIP: baixe o novo ZIP e copie por cima, **sem apagar** `.env`, `lojas\`, `arquivo\` e `estado.pickle`. |
+| **Atualizar o bot** | Se instalou com Git: clique direito em `servidor\atualizar.bat` → **Executar como administrador**. Com ZIP: extraia o novo ZIP em outra pasta e copie o conteúdo por cima de `C:\bot-fechamento`, **exceto a pasta `lojas\`** (se a configuração está em `C:\bot-config`, nada a preservar). O `.env`, `arquivo\` e `estado.pickle` não vêm no ZIP, então não são afetados. Depois reinicie a tarefa (ou o notebook). |
 | **Fotos antigas** | Apagadas sozinhas após 7 dias. Nada a fazer. |
 
 > **Cuidado ao editar o YAML:** se ficar com erro, o bot registra no log e avisa quem tentar usar
@@ -257,7 +279,7 @@ resumo e o PDF**, e que **nenhuma foto** apareceu solta na conversa.
 Copie para um pendrive ou para o Google Drive:
 
 - `C:\bot-fechamento\.env` (contém o token: **guarde em lugar seguro, não compartilhe**);
-- a pasta `C:\bot-fechamento\lojas\` (checklists e logo).
+- a pasta de configuração: `C:\bot-config\` (ou `C:\bot-fechamento\lojas\`, se não separou).
 
 As fotos e PDFs dos últimos 7 dias não precisam de backup.
 
@@ -280,7 +302,8 @@ o notebook à distância. Opções comuns: **AnyDesk**, **Chrome Remote Desktop*
 | Sintoma | O que verificar |
 |---|---|
 | **O bot não responde** | 1) O notebook está ligado e com internet? 2) Abra `logs\bot.log` e veja as últimas linhas. 3) No PowerShell (administrador): `Get-ScheduledTask -TaskName BotChecklistRestaurante` mostra o estado (`Running` = rodando). 4) Se estiver parado: `Start-ScheduledTask -TaskName BotChecklistRestaurante`. |
-| **Log mostra `InvalidToken` ou `Unauthorized`** | O `BOT_TOKEN` no `.env` está errado ou foi revogado. Copie de novo do `@BotFather`. |
+| **Log mostra `O Telegram recusou o BOT_TOKEN`** | O `BOT_TOKEN` no `.env` está errado ou foi revogado. Copie de novo do `@BotFather`, salve e **reinicie a tarefa** (o token só é lido ao ligar). |
+| **Log mostra `Sem conexão com o Telegram`** | Sem internet (ou o Wi-Fi ainda não conectou). Não precisa fazer nada: o `iniciar-bot.bat` tenta de novo a cada 15 segundos. Se persistir, veja Wi-Fi e rede. |
 | **Log mostra `Conflict: terminated by other getUpdates`** | O bot está rodando em **outro lugar** com o mesmo token (outro computador, ou uma janela do Prompt aberta). Deixe só uma cópia. |
 | **`ModuleNotFoundError` em `logs\erro-saida.log`** | As dependências não foram instaladas. Refaça o passo 4. |
 | **O bot não responde depois de reiniciar** | Provavelmente o Wi-Fi só conecta depois do login. No notebook, vá em **Configurações → Rede e Internet → Wi-Fi → Gerenciar redes conhecidas**, remova a rede e **reconecte marcando "Conectar automaticamente"**, mantendo a opção de que **vale para todos os usuários**. Depois refaça o teste 8.1. Em último caso, conecte o notebook por cabo de rede. |
