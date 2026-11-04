@@ -51,6 +51,10 @@ S_DIR = _st("dir", fontSize=9, leading=13, alignment=TA_RIGHT, fontName="Helveti
 S_FOTO = _st("foto", fontSize=7, textColor=CINZA, leading=9)
 S_OBS = _st("obs", fontSize=8.5, leading=11)
 S_PEQ = _st("peq", fontSize=7.5, leading=9, textColor=CINZA)
+FUNDO_ALERTA = colors.HexColor("#fdecea")
+S_NAO_REALIZADA = _st("naorealizada", fontSize=8.5, leading=11, textColor=VERMELHO)
+S_ALERTA = _st("alerta", fontSize=9.5, leading=13, fontName="Helvetica-Bold", textColor=VERMELHO,
+               alignment=TA_CENTER)
 
 
 def _p(texto: str, style: ParagraphStyle) -> Paragraph:
@@ -333,6 +337,12 @@ def gerar_lista_pdf(
             ("Início", "____:____"), ("Término", "____:____"),
         ]
     fluxo += [_grade_info(info), Spacer(1, 0.4 * cm)]
+    if preenchida:
+        faltaram = len(s.nao_realizadas(cl))
+        if faltaram:
+            fluxo += [Paragraph(
+                f"ATENÇÃO: {faltaram} de {len(cl.etapas)} etapas NÃO foram realizadas "
+                "(destacadas em vermelho).", S_ALERTA), Spacer(1, 0.4 * cm)]
 
     larg = [0.9 * cm, 6.6 * cm, 1.5 * cm, 1.5 * cm, 1.4 * cm]
     larg.append(LARGURA - sum(larg))
@@ -340,14 +350,11 @@ def gerar_lista_pdf(
                          alignment=TA_CENTER)) for t in ("Nº", "Etapa", "Concl.", "Probl.", "N/A", "Obs. / hora")]
     for nome, etapas in cl.secoes():
         linhas = [[_p(nome or "ETAPAS", S_SEC), "", "", "", "", ""], cab_col]
+        destacadas = []  # linhas da tabela de etapas sem resposta (preenchida), em destaque
         for i, e in etapas:
             r = s.respostas.get(i) if s else None
             st = r.status if r and r.fechada else None
             tag = ""
-            if e.foto == FOTO_OBRIGATORIA:
-                tag = "  [foto]" if e.fotos == 1 else f"  [{e.fotos} fotos]"
-            elif e.foto == FOTO_OPCIONAL:
-                tag = "  [foto opcional]"
             titulo_et = f"<b>{escape(e.titulo)}</b><font size=7 color='#757575'>{escape(tag)}</font>"
             if e.instrucao:
                 titulo_et += f"<br/><font size=7 color='#757575'>{escape(e.instrucao)}</font>"
@@ -357,12 +364,16 @@ def gerar_lista_pdf(
                 obs = " / ".join(o for o in r.obs if o)
                 if obs:
                     obs_txt += " - " + obs
+            obs_cel = _p(obs_txt, S_OBS)
+            if preenchida and st is None:  # ignorada ou fechamento encerrado antes de chegar nela
+                destacadas.append(len(linhas))
+                obs_cel = Paragraph("<b>NÃO REALIZADA</b>", S_NAO_REALIZADA)
             linhas.append([
                 _p(str(i + 1), _st("n", fontSize=9, alignment=TA_CENTER)),
                 Paragraph(titulo_et, S_CELL),
                 _Caixa(st is Status.CONCLUIDO), _Caixa(st is Status.PROBLEMA),
                 _Caixa(st is Status.NAO_SE_APLICA),
-                _p(obs_txt, S_OBS),
+                obs_cel,
             ])
         t = Table(linhas, colWidths=larg, repeatRows=2)
         t.setStyle(TableStyle([
@@ -373,13 +384,19 @@ def gerar_lista_pdf(
             ("ROWBACKGROUNDS", (0, 2), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
             ("TOPPADDING", (0, 2), (-1, -1), 7), ("BOTTOMPADDING", (0, 2), (-1, -1), 7),
         ]))
+        for lin in destacadas:  # depois do zebrado, para prevalecer sobre ele
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, lin), (-1, lin), FUNDO_ALERTA),
+                ("BOX", (0, lin), (-1, lin), 1.2, VERMELHO),
+            ]))
         fluxo += [t, Spacer(1, 0.4 * cm)]
     fluxo += [
         Spacer(1, 0.3 * cm),
         _p("Assinatura do responsável: " + "_" * 40, S_CELL),
         Spacer(1, 0.2 * cm),
         _p("Legenda: Concl. = concluído · Probl. = com problema (descrever em Obs.) · "
-           "N/A = não se aplica", S_PEQ),
+           "N/A = não se aplica" + (" · Linha em vermelho = etapa não realizada"
+                                    if preenchida else ""), S_PEQ),
     ]
     rodape = _Rodape(f"{loja.nome} · {cl.nome} · {data_br(d)}")
     _doc(destino, titulo).build(fluxo, onFirstPage=rodape, onLaterPages=rodape)

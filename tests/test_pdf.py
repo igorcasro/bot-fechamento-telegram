@@ -32,3 +32,15 @@ def test_lista_vazia_e_preenchida(loja, cl, tmp_path):
     for dest, sessao in (("v.pdf", None), ("p.pdf", s)):
         out = gerar_lista_pdf(loja, cl, sessao, tmp_path / dest)
         assert out.read_bytes().startswith(b"%PDF")
+
+
+def test_lista_preenchida_destaca_etapas_nao_realizadas(loja, cl, tmp_path, monkeypatch):
+    """Etapas sem resposta (ignoradas ou fechamento encerrado antes) saem em destaque."""
+    from reportlab import rl_config
+    monkeypatch.setattr(rl_config, "pageCompression", 0)  # texto legível nos bytes do PDF
+    s = cenario(cl, tmp_path)  # responde 2 de 5 etapas e finaliza: 3 ficam sem resposta
+    assert len(s.nao_realizadas(cl)) == 3
+    preenchida = gerar_lista_pdf(loja, cl, s, tmp_path / "p.pdf").read_bytes()
+    assert preenchida.count(b"REALIZADA") == 3 and b"3 de 5 etapas" in preenchida
+    vazia = gerar_lista_pdf(loja, cl, None, tmp_path / "v.pdf").read_bytes()
+    assert b"REALIZADA" not in vazia and b"etapas N" not in vazia
