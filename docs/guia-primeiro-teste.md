@@ -163,7 +163,9 @@ Na **conversa privada** com o bot:
 3. Na etapa **"Coifa desligada e aberta"** (foto opcional): toque Concluído e depois
    **Continuar sem foto**.
 4. Numa etapa, toque **Problema**: escreva um texto ("Ficou sujo"), envie uma foto e toque
-   **Continuar**.
+   **Continuar**. (Se enviar a foto **com legenda**, a etapa já fecha sozinha.)
+   Numa etapa com foto, também pode enviar a foto **sem tocar em Concluído**: ela conta como
+   conclusão.
 5. Na etapa **"Carne descongelando"**, toque **Não se aplica**.
 6. Responda mais algumas etapas e envie `/status` (deve mostrar a etapa em que você está).
 7. Envie `/finalizar` → toque **Sim, finalizar** (o que ficou sem resposta vira "não realizada").

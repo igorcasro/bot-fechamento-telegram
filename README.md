@@ -13,7 +13,10 @@ ao bot, então o `/fechar` recusa e pede a conversa privada).
 1. `/fechar` inicia o checklist **do dia** (as etapas mudam conforme o dia, se configurado).
 2. Para cada etapa o bot mostra os botões **✅ Concluído · ⚠️ Problema · ➖ Não se aplica**.
    - *Concluído*: pede a foto (obrigatória) ou oferece "Continuar sem foto" (opcional).
-   - *Problema*: descreva em texto e/ou foto e toque em **Continuar**.
+   - *Problema*: descreva em texto e/ou foto e toque em **Continuar** (foto com legenda já
+     encerra a etapa, sem precisar do botão).
+   - Atalho: enviar a foto direto, sem tocar em **Concluído**, também conclui a etapa (a
+     legenda vira observação).
    - *Não se aplica*: avança direto.
 3. Ao responder a última etapa, o **resumo em texto e o PDF vão para o grupo** do gerente e o
    funcionário recebe só uma confirmação curta. As fotos **nunca voltam na conversa**: ficam

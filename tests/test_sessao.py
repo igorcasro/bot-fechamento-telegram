@@ -17,8 +17,32 @@ def test_concluido_com_foto_obrigatoria_avanca(cl):
     assert s.etapa_atual == 1
 
 
-def test_foto_antes_do_status_falha(cl):
+def test_foto_antes_do_status_conta_como_concluido(cl):
     s = nova(cl)
+    assert s.add_foto(cl, "a.jpg", hora(), legenda="tudo ok") == (0, True)
+    r = s.respostas[0]
+    assert r.status is Status.CONCLUIDO and r.fechada and r.obs == ["tudo ok"]
+    assert s.etapa_atual == 1
+
+
+def test_foto_antes_do_status_em_etapa_de_duas_fotos_espera_a_segunda(cl):
+    s = nova(cl)
+    s.etapa_atual = 1  # exige 2 fotos
+    assert s.add_foto(cl, "a", hora()) == (1, False)
+    assert s.respostas[1].status is Status.CONCLUIDO and s.fotos_faltando(cl) == 1
+    assert s.add_foto(cl, "b", hora()) == (1, True)
+
+
+def test_foto_com_legenda_em_problema_fecha_a_etapa(cl):
+    s = nova(cl)
+    s.responder(cl, Status.PROBLEMA, hora())
+    assert s.add_foto(cl, "a", hora(), legenda="Pia entupida") == (0, True)
+    assert s.etapa_atual == 1 and s.respostas[0].obs == ["Pia entupida"]
+
+
+def test_foto_apos_checklist_percorrido_falha(cl):
+    s = nova(cl)
+    s.etapa_atual = len(cl.etapas)
     with pytest.raises(EstadoInvalido):
         s.add_foto(cl, "a.jpg", hora())
 
@@ -62,11 +86,11 @@ def test_problema_aceita_obs_e_fotos_e_exige_continuar(cl):
     s = nova(cl)
     s.responder(cl, Status.PROBLEMA, hora())
     s.add_obs(cl, "Ficou louça")
-    assert s.add_foto(cl, "a", hora(), legenda="legenda") == (0, False)
+    assert s.add_foto(cl, "a", hora()) == (0, False)  # sem legenda: segue aberta
     assert s.fase(cl) == "problema" and s.etapa_atual == 0
     s.continuar(cl)
     assert s.etapa_atual == 1
-    assert s.respostas[0].obs == ["Ficou louça", "legenda"]
+    assert s.respostas[0].obs == ["Ficou louça"]
 
 
 def test_responder_duas_vezes_falha(cl):

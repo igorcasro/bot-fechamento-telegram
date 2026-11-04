@@ -5,7 +5,10 @@ Fluxo de cada etapa:
   2. Concluído  -> fotos conforme a etapa (obrigatória: precisa das fotos; opcional: pode
                    seguir sem foto; nenhuma: avança direto)
      Problema   -> observação (texto) e/ou fotos, e o funcionário toca em "Continuar"
+                   (foto com legenda já basta: a legenda é a observação e a etapa fecha)
      Não se aplica -> avança direto
+  Atalho: foto enviada antes de escolher o status conta como "Concluído" (a legenda vira
+  observação), sem precisar tocar no botão.
 Etapas sem resposta ao finalizar contam como "não realizadas".
 """
 from __future__ import annotations
@@ -215,7 +218,8 @@ class Sessao:
         """Anexa foto. Retorna (índice da etapa que recebeu, etapa_fechou).
 
         Fotos de um álbum enviado logo após a etapa fechar são anexadas a essa etapa,
-        em vez de "vazarem" para a próxima.
+        em vez de "vazarem" para a próxima. Foto sem status escolhido marca a etapa como
+        Concluída; foto com legenda numa etapa de Problema já a fecha.
         """
         foto = FotoReg(caminho=caminho, hora=_iso(agora))
         if (media_group_id and media_group_id == self._ultimo_grupo
@@ -226,14 +230,18 @@ class Sessao:
                 r.obs.append(legenda)
             return self._ultima_etapa, False
 
+        if self.encerrada or self.concluida(cl):
+            raise EstadoInvalido("Este checklist já foi concluído.")
         r = self.resposta_atual(cl)
-        if r is None:
-            raise EstadoInvalido("Antes da foto, escolha o status da etapa (botões).")
+        if r is None:  # foto antes do status = conclusão da etapa
+            r = self.respostas[self.etapa_atual] = Resposta(status=Status.CONCLUIDO, hora=_iso(agora))
         r.fotos.append(foto)
         if legenda:
             r.obs.append(legenda)
         idx = self.etapa_atual
-        if r.status is Status.CONCLUIDO and len(r.fotos) >= cl.etapas[idx].fotos:
+        fechar = (len(r.fotos) >= cl.etapas[idx].fotos if r.status is Status.CONCLUIDO
+                  else bool(legenda))
+        if fechar:
             self._fechar(idx)
             self._ultimo_grupo, self._ultima_etapa = media_group_id, idx
             return idx, True

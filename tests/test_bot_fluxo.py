@@ -198,16 +198,27 @@ def test_finalizar_antecipado_e_comandos_de_dia(loja, tmp_path):
     assert chat.comando("resultado").reply_document.await_count == 1
 
 
-def test_foto_sem_status_e_botao_velho(loja, tmp_path):
+def test_foto_sem_status_conta_como_concluido_e_botao_velho(loja, tmp_path):
     chat = Chat(novo_ctx(loja, tmp_path))
     chat.comando("fechar")
-    m = chat.foto()
-    assert "escolha o status" in m.reply_text.await_args.args[0].lower()
-    assert chat.sessao.total_fotos() == 0
-    chat.clicar("st:0:c")
-    chat.foto()
+    m = chat.foto(caption="Caixas limpas")
+    assert "Etapa registrada" in m.reply_text.await_args_list[0].args[0]
+    s = chat.sessao
+    assert s.etapa_atual == 1 and s.total_fotos() == 1
+    assert s.respostas[0].status == "concluido" and s.respostas[0].obs == ["Caixas limpas"]
     _, q = chat.clicar("st:0:c")  # botão antigo da etapa 1
     assert q.answer.await_args.kwargs.get("show_alert") is True
+
+
+def test_foto_com_legenda_em_problema_fecha_sem_pedir_observacao(loja, tmp_path):
+    chat = Chat(novo_ctx(loja, tmp_path))
+    chat.comando("fechar")
+    chat.clicar("st:0:p")
+    m = chat.foto(caption="Gordura transbordando")
+    respostas = [c.args[0] for c in m.reply_text.await_args_list]
+    assert any("Etapa registrada" in r for r in respostas)
+    assert not any("observação" in r.lower() for r in respostas[:1])
+    assert chat.sessao.etapa_atual == 1
 
 
 def test_checklist_nao_configurado(loja, tmp_path):

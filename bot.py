@@ -423,9 +423,8 @@ async def foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     s, cl = par
     gid = msg.media_group_id
-    continuacao = s.etapa_destino(gid) != s.etapa_atual
-    if not continuacao and s.resposta_atual(cl) is None:
-        await msg.reply_text("Antes da foto, escolha o status da etapa nos botões 👆")
+    if s.concluida(cl) and s.etapa_destino(gid) == s.etapa_atual:
+        await msg.reply_text("Todas as etapas já foram respondidas.")
         return
 
     agora = ctx.loja.agora()

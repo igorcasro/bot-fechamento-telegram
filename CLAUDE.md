@@ -55,7 +55,8 @@ Regras de dependência: `fechamento/` **não importa Telegram**. `bot.py` só ad
 
 Botões de status → Concluído: foto obrigatória (precisa das `fotos`), opcional (pode
 "Continuar sem foto") ou nenhuma / Problema: observação (texto) e/ou fotos + botão
-Continuar / Não se aplica: avança. Álbuns de fotos enviados de uma vez são anexados à
+Continuar (foto **com legenda** já fecha a etapa) / Não se aplica: avança. Foto enviada antes de
+escolher o status conta como **Concluído** (legenda vira observação). Álbuns de fotos enviados de uma vez são anexados à
 etapa que acabou de fechar (não "vazam" para a próxima).
 
 ## Decisões já tomadas (com o usuário)
