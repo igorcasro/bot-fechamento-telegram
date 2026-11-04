@@ -140,6 +140,10 @@ python bot.py            # roda o bot (polling)
 pytest                   # testes
 ```
 
+No Windows (PowerShell): `.venv\Scripts\python.exe -m pytest -v`. A suíte (60 testes) foi executada
+em Windows 11 com Python 3.13 em 04/11/2026 e passou inteira. Isso cobre só a lógica, os PDFs e os
+handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendências).
+
 ## Segurança e privacidade
 
 - **Nunca** commitar `.env`, `estado.pickle` nem `arquivo/` (já no `.gitignore`).
