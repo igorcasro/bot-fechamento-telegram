@@ -1,187 +1,187 @@
 {
   ".claude/settings.json": {
-    "mtime": 1793817396.6547222,
-    "seen": 1793817701.1988366,
-    "ast_hash": "3b541b9935fcf0831355da956f897645",
+    "mtime": 1793815664.615504,
+    "seen": 1793824038.0371566,
+    "ast_hash": "3ac995fbf93552a991ecab9b63f776aa",
     "semantic_hash": ""
   },
   "bot.py": {
-    "mtime": 1793816992.1677392,
-    "seen": 1793817701.1988478,
-    "ast_hash": "f551f83c7b9c2c4ab273042f74f70f68",
+    "mtime": 1793824005.2524896,
+    "seen": 1793824038.0371623,
+    "ast_hash": "1a83e39dcd1b629c23e2f4d97f8fcef2",
     "semantic_hash": ""
   },
   "fechamento/__init__.py": {
-    "mtime": 1793802256.6354227,
-    "seen": 1793817701.198853,
+    "mtime": 1793814658.9780333,
+    "seen": 1793824038.0371656,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
   "fechamento/arquivo.py": {
-    "mtime": 1793805056.3173573,
-    "seen": 1793817701.1988564,
-    "ast_hash": "067c9ee57fc0f9305b32e0e71bc69d5c",
+    "mtime": 1793814658.9780333,
+    "seen": 1793824038.037168,
+    "ast_hash": "fc766f813b42e8a4df0ccad98ac50e62",
     "semantic_hash": ""
   },
   "fechamento/checklist.py": {
-    "mtime": 1793805065.3665693,
-    "seen": 1793817701.1988592,
-    "ast_hash": "348da35ca17c6a28aabf5f790f83b623",
+    "mtime": 1793814658.9790342,
+    "seen": 1793824038.0371704,
+    "ast_hash": "3b2702bb0352ca5248ac0e92aac82efa",
     "semantic_hash": ""
   },
   "fechamento/entrega.py": {
-    "mtime": 1793817524.0038688,
-    "seen": 1793817701.1988618,
-    "ast_hash": "f6adb327d2eb7b648a1289b9d027f858",
+    "mtime": 1793821110.4677286,
+    "seen": 1793824038.037172,
+    "ast_hash": "51286cbfbe0e33aa9a68d32f7b92bc27",
     "semantic_hash": ""
   },
   "fechamento/logs.py": {
-    "mtime": 1793805834.1951544,
-    "seen": 1793817701.198864,
-    "ast_hash": "83785a3e3718c7a49f54dba828c07551",
+    "mtime": 1793814658.980033,
+    "seen": 1793824038.037173,
+    "ast_hash": "71c5c100795186c44cc525db21a9bfcd",
     "semantic_hash": ""
   },
   "fechamento/loja.py": {
-    "mtime": 1793805204.2725658,
-    "seen": 1793817701.1988664,
-    "ast_hash": "06ca3f9398b5d022b39c8b93dd264a7a",
+    "mtime": 1793814658.980033,
+    "seen": 1793824038.0371742,
+    "ast_hash": "5ca3da22b6d88eb56d0ed463295e5fd1",
     "semantic_hash": ""
   },
   "fechamento/pdf.py": {
-    "mtime": 1793802409.7946424,
-    "seen": 1793817701.1988692,
-    "ast_hash": "e88028c409c8cb95316b08c69a5e52f4",
+    "mtime": 1793824545.271534,
+    "seen": 1793824579.7020445,
+    "ast_hash": "f793ed3121469a824b1a503251f05ec9",
     "semantic_hash": ""
   },
   "fechamento/relatorio.py": {
-    "mtime": 1793817524.0041356,
-    "seen": 1793817701.1988723,
-    "ast_hash": "67c344137174a5e82c054ed09eb57f6f",
+    "mtime": 1793821110.4677286,
+    "seen": 1793824038.0371766,
+    "ast_hash": "e735e3c6a7a08c4e4dbf5d873f3f2c99",
     "semantic_hash": ""
   },
   "fechamento/sessao.py": {
-    "mtime": 1793802505.368585,
-    "seen": 1793817701.1988747,
-    "ast_hash": "42d94952aec66629dd6a853efe81ae0b",
+    "mtime": 1793821110.4687274,
+    "seen": 1793824038.0371778,
+    "ast_hash": "07456bddef4eae83558b6addf57a86e2",
     "semantic_hash": ""
   },
   "lojas/divino-fogao/checklists/fechamento.yaml": {
-    "mtime": 1793805056.3202944,
-    "seen": 1793817701.198877,
-    "ast_hash": "811cfd4efaba9fe6e56c4fd00fb3a5f4",
+    "mtime": 1793823381.555783,
+    "seen": 1793824038.0371792,
+    "ast_hash": "4c3ef363c2850209e6331fd3053cf36e",
     "semantic_hash": ""
   },
   "lojas/divino-fogao/loja.yaml": {
-    "mtime": 1793802256.6466668,
-    "seen": 1793817701.1988795,
-    "ast_hash": "7b3d1892646feee2bfcb1fccf2b92aa3",
+    "mtime": 1793814658.983032,
+    "seen": 1793824038.0371807,
+    "ast_hash": "c6cb5fa631b308ff9865cc135bd6fa5a",
     "semantic_hash": ""
   },
   "servidor/desinstalar-windows.ps1": {
-    "mtime": 1793805861.6788442,
-    "seen": 1793817701.1988826,
+    "mtime": 1793814658.9847813,
+    "seen": 1793824038.0371816,
     "ast_hash": "cbe7ae333ef8c687ce2134be9796ee0b",
     "semantic_hash": "cbe7ae333ef8c687ce2134be9796ee0b"
   },
   "servidor/instalar-windows.ps1": {
-    "mtime": 1793805861.6820912,
-    "seen": 1793817701.1988852,
+    "mtime": 1793814658.9857862,
+    "seen": 1793824038.037183,
     "ast_hash": "32d5f916715534aa11a2b418a5464286",
     "semantic_hash": "32d5f916715534aa11a2b418a5464286"
   },
   "tests/conftest.py": {
-    "mtime": 1793802580.3047442,
-    "seen": 1793817701.1988888,
-    "ast_hash": "be094b113879c55d09e5f1b850ed9916",
+    "mtime": 1793814658.9857862,
+    "seen": 1793824038.037184,
+    "ast_hash": "41dbd4811157f3546808b7ca77be7742",
     "semantic_hash": ""
   },
   "tests/test_bot_fluxo.py": {
-    "mtime": 1793816992.1677392,
-    "seen": 1793817701.1988912,
-    "ast_hash": "b9638488149fe862ece297b7340c8f02",
+    "mtime": 1793824015.483974,
+    "seen": 1793824038.0371852,
+    "ast_hash": "4a0136400493fad32514739e05937bbb",
     "semantic_hash": ""
   },
   "tests/test_checklist.py": {
-    "mtime": 1793805056.3254158,
-    "seen": 1793817701.1988933,
-    "ast_hash": "1f01b93103418742cbf05fe091b248ba",
+    "mtime": 1793814658.9867868,
+    "seen": 1793824038.0371866,
+    "ast_hash": "99e238e6f1ff5c2f461017b316124f23",
     "semantic_hash": ""
   },
   "tests/test_logs.py": {
-    "mtime": 1793805834.2214231,
-    "seen": 1793817701.1988964,
-    "ast_hash": "8e1df9bcda4cd3ab25abbf36ba6c99c3",
+    "mtime": 1793814658.9878933,
+    "seen": 1793824038.0371876,
+    "ast_hash": "47c871b04cd6798c6fc8357ad94b05da",
     "semantic_hash": ""
   },
   "tests/test_pdf.py": {
-    "mtime": 1793802580.3117876,
-    "seen": 1793817701.1988983,
-    "ast_hash": "f9b564634ab883f40b21d6bef5c187db",
+    "mtime": 1793824558.173648,
+    "seen": 1793824579.702062,
+    "ast_hash": "a3e3a95542bc87fff05db08c27911a76",
     "semantic_hash": ""
   },
   "tests/test_relatorio_arquivo.py": {
-    "mtime": 1793802580.3098855,
-    "seen": 1793817701.1989007,
-    "ast_hash": "04e358ce7da1194c9fa1a3c6a5b160bc",
+    "mtime": 1793814658.9888983,
+    "seen": 1793824038.0371897,
+    "ast_hash": "5b83b2d637c34eea6456830c48f581ed",
     "semantic_hash": ""
   },
   "tests/test_sessao.py": {
-    "mtime": 1793802580.308117,
-    "seen": 1793817701.1989038,
-    "ast_hash": "9a680c4dd0d7f446b1fcff7d7073f9da",
+    "mtime": 1793821110.4833035,
+    "seen": 1793824038.0371912,
+    "ast_hash": "2fda2689a05d3c83da669119bdc46ec0",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1793817396.652202,
-    "seen": 1793817701.198907,
+    "mtime": 1793815664.60547,
+    "seen": 1793824038.0371928,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793817540.4149156,
-    "seen": 1793817701.198909,
-    "ast_hash": "e889f3c7a623c0931cf2b5160900e1f7",
+    "mtime": 1793821110.4616847,
+    "seen": 1793824038.0371938,
+    "ast_hash": "b8e23d17a18257a6cb02a867b66b3ea0",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793817524.003535,
-    "seen": 1793817701.198911,
-    "ast_hash": "f1f6be3f5228164d937273d07c61eb39",
+    "mtime": 1793821407.791615,
+    "seen": 1793824038.0371952,
+    "ast_hash": "74ba67687b174424741e7b35409a0aeb",
     "semantic_hash": ""
   },
   "docs/guia-primeiro-teste.md": {
-    "mtime": 1793817034.4002101,
-    "seen": 1793817701.1989129,
-    "ast_hash": "ca0455f528e4866750caa05939fe03e9",
+    "mtime": 1793821110.464727,
+    "seen": 1793824038.0371966,
+    "ast_hash": "f93db92d578ce6585528203a4c90d5c2",
     "semantic_hash": ""
   },
   "docs/guia-servidor-windows.md": {
-    "mtime": 1793817057.1162374,
-    "seen": 1793817701.198915,
-    "ast_hash": "fa1a22d0fb66a945e38c2cbae733b7f4",
+    "mtime": 1793821110.4657323,
+    "seen": 1793824038.0371978,
+    "ast_hash": "e5b599afcfc3f39028e53c5ce396bfc8",
     "semantic_hash": ""
   },
   "docs/guia-venda.md": {
-    "mtime": 1793817524.0047147,
-    "seen": 1793817701.198918,
-    "ast_hash": "e10ebeeaa2a70e49790da0b5fe8a50da",
+    "mtime": 1793821110.4667273,
+    "seen": 1793824038.0371988,
+    "ast_hash": "87dd0d8b4bbf4c873df1dd6cda83fbf0",
     "semantic_hash": ""
   },
   "requirements-dev.txt": {
-    "mtime": 1793816937.6529639,
-    "seen": 1793817701.1989202,
-    "ast_hash": "2ef7ea8deacb16a0eff7ab5915dd64bb",
+    "mtime": 1793817218.560639,
+    "seen": 1793824038.0372,
+    "ast_hash": "f219f83805d7bbc9c11e184d96dab465",
     "semantic_hash": ""
   },
   "requirements.txt": {
-    "mtime": 1793816992.1677392,
-    "seen": 1793817701.198922,
-    "ast_hash": "f63a5ea1bf01d1aacaa09917432f1f3d",
+    "mtime": 1793817218.560639,
+    "seen": 1793824038.0372012,
+    "ast_hash": "3b1c4e2faf8b13f77352eb2610907b1e",
     "semantic_hash": ""
   },
   "lojas/divino-fogao/logo.png": {
-    "mtime": 1793817396.660202,
-    "seen": 1793817701.1989238,
+    "mtime": 1793753788.0,
+    "seen": 1793824038.0372026,
     "ast_hash": "4f0b518c764cf04fc2cb6ce08a1541df",
     "semantic_hash": ""
   }

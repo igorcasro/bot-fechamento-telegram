@@ -1,28 +1,26 @@
 # Graph Report - bot-fechamento-telegram  (2026-11-04)
 
 ## Corpus Check
-- 22 files · ~22,039 words
+- 22 files · ~23,703 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 2, .bat 2, .example 1)
 
 ## Summary
-- 365 nodes · 1064 edges · 13 communities (10 shown, 3 thin omitted)
-- Extraction: 83% EXTRACTED · 17% INFERRED · 0% AMBIGUOUS · INFERRED: 180 edges (avg confidence: 0.89)
+- 384 nodes · 1121 edges · 12 communities (8 shown, 4 thin omitted)
+- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 175 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `28b4153b`
+- Built from commit: `6378a8ab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - bot.py
 - pdf.py
-- Loja
 - test_bot_fluxo.py
 - Sessao
 - Status
-- Arquivo
 - logs.py
 - fechamento.yaml
 - entrega.py
@@ -33,57 +31,49 @@
 2. `Checklist` - 53 edges
 3. `Status` - 32 edges
 4. `gerar_relatorio_pdf()` - 30 edges
-5. `Chat` - 27 edges
-6. `Loja` - 24 edges
-7. `gerar_lista_pdf()` - 23 edges
-8. `hora()` - 23 edges
-9. `Arquivo` - 22 edges
-10. `build_app()` - 20 edges
+5. `Chat` - 29 edges
+6. `hora()` - 26 edges
+7. `gerar_lista_pdf()` - 24 edges
+8. `Loja` - 24 edges
+9. `novo_ctx()` - 24 edges
+10. `Arquivo` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `cmd_reenviar()` --indirect_call--> `gerar_relatorio_pdf()`  [INFERRED]
+  bot.py → fechamento/pdf.py
+- `finalizar()` --indirect_call--> `gerar_relatorio_pdf()`  [INFERRED]
+  bot.py → fechamento/pdf.py
+- `cmd_imprimir()` --indirect_call--> `gerar_lista_pdf()`  [INFERRED]
+  bot.py → fechamento/pdf.py
+- `cmd_resultado()` --indirect_call--> `gerar_lista_pdf()`  [INFERRED]
+  bot.py → fechamento/pdf.py
 - `Contexto` --uses--> `Arquivo`  [INFERRED]
   bot.py → fechamento/arquivo.py
-- `Contexto` --uses--> `CanalEntrega`  [INFERRED]
-  bot.py → fechamento/entrega.py
-- `Contexto` --uses--> `Loja`  [INFERRED]
-  bot.py → fechamento/loja.py
-- `salvar()` --uses--> `Checklist`  [INFERRED]
-  bot.py → fechamento/checklist.py
-- `salvar()` --uses--> `Sessao`  [INFERRED]
-  bot.py → fechamento/sessao.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (13 total, 3 thin omitted)
+## Communities (12 total, 4 thin omitted)
 
 ### Community 0 - "bot.py"
-Cohesion: 0.09
-Nodes (40): _args(), botao(), build_app(), carregar_sessao(), cmd_cancelar(), cmd_dia(), cmd_dinamico(), cmd_finalizar() (+32 more)
+Cohesion: 0.08
+Nodes (43): _args(), botao(), build_app(), carregar_sessao(), cmd_cancelar(), cmd_dia(), cmd_dinamico(), cmd_finalizar() (+35 more)
 
 ### Community 1 - "pdf.py"
 Cohesion: 0.08
-Nodes (20): _barra_secao(), _cabecalho(), _Caixa, _celula_etapa(), _doc(), gerar_lista_pdf(), gerar_relatorio_pdf(), _grade_info() (+12 more)
-
-### Community 2 - "Loja"
-Cohesion: 0.09
-Nodes (7): Loja, cl(), loja(), test_loja_tipo_por_comando_e_validar(), sessao_pronta(), test_progresso_texto(), test_resumo_texto()
+Nodes (23): _barra_secao(), _cabecalho(), _Caixa, _celula_etapa(), _doc(), gerar_lista_pdf(), gerar_relatorio_pdf(), _grade_info() (+15 more)
 
 ### Community 3 - "test_bot_fluxo.py"
-Cohesion: 0.12
-Nodes (24): BotFalso, CanalFalso, Chat, completar(), copia_loja(), novo_ctx(), novo_msg(), test_cancelar_descarta_checklist_e_fotos() (+16 more)
+Cohesion: 0.11
+Nodes (28): BotFalso, CanalFalso, Chat, completar(), copia_loja(), novo_ctx(), novo_msg(), test_cancelar_descarta_checklist_e_fotos() (+20 more)
 
 ### Community 4 - "Sessao"
-Cohesion: 0.10
-Nodes (9): Checklist, dia_semana(), progresso_texto(), resumo_texto(), EstadoInvalido, _iso(), Resposta, Sessao (+1 more)
+Cohesion: 0.07
+Nodes (16): Arquivo, Checklist, progresso_texto(), resumo_texto(), FotoReg, _iso(), Resposta, Sessao (+8 more)
 
 ### Community 5 - "Status"
-Cohesion: 0.20
-Nodes (18): FotoReg, Status, hora(), test_resumo_sem_pendencias(), nova(), test_album_nao_vaza_para_proxima_etapa(), test_concluido_com_foto_obrigatoria_avanca(), test_etapa_com_duas_fotos() (+10 more)
-
-### Community 6 - "Arquivo"
-Cohesion: 0.15
-Nodes (4): Arquivo, test_reduzir_foto(), test_resultados_ida_e_volta(), test_retencao_remove_so_dias_antigos()
+Cohesion: 0.23
+Nodes (20): EstadoInvalido, Status, hora(), nova(), test_album_nao_vaza_para_proxima_etapa(), test_concluido_com_foto_obrigatoria_avanca(), test_etapa_com_duas_fotos(), test_finalizar_descarta_concluido_sem_fotos_obrigatorias() (+12 more)
 
 ### Community 7 - "logs.py"
 Cohesion: 0.14
@@ -94,26 +84,26 @@ Cohesion: 0.22
 Nodes (8): comando, foto, titulo, nome, secoes, etapas, nome, tipo
 
 ### Community 12 - "test_checklist.py"
-Cohesion: 0.12
-Nodes (10): Etapa, _to_date(), test_comando_padrao_e_personalizado(), test_para_data_filtra_etapas(), test_secoes_indices_globais(), test_tipo_deve_ser_igual_ao_arquivo_e_comando_valido(), test_vale_em_dias_da_semana(), test_vale_em_sem_regras_vale_todo_dia() (+2 more)
+Cohesion: 0.06
+Nodes (14): Etapa, _to_date(), Loja, cl(), loja(), test_comando_padrao_e_personalizado(), test_loja_tipo_por_comando_e_validar(), test_para_data_filtra_etapas() (+6 more)
 
 ## Knowledge Gaps
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Checklist` connect `Sessao` to `bot.py`, `pdf.py`, `Loja`, `Arquivo`, `test_checklist.py`?**
-  _High betweenness centrality (0.156) - this node is a cross-community bridge._
-- **Are the 20 inferred relationships involving `Sessao` (e.g. with `carregar_sessao()` and `finalizar()`) actually correct?**
-  _`Sessao` has 20 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Checklist` connect `Sessao` to `bot.py`, `pdf.py`, `test_checklist.py`?**
+  _High betweenness centrality (0.146) - this node is a cross-community bridge._
+- **Are the 16 inferred relationships involving `Sessao` (e.g. with `carregar_sessao()` and `finalizar()`) actually correct?**
+  _`Sessao` has 16 INFERRED edges - model-reasoned connections that need verification._
 - **Should `bot.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.0907928388746803 - nodes in this community are weakly interconnected._
-- **Why does `Sessao` connect `Sessao` to `bot.py`, `pdf.py`, `Loja`, `Status`, `Arquivo`?**
-  _High betweenness centrality (0.122) - this node is a cross-community bridge._
-- **Are the 21 inferred relationships involving `Checklist` (e.g. with `carregar_sessao()` and `finalizar()`) actually correct?**
-  _`Checklist` has 21 INFERRED edges - model-reasoned connections that need verification._
+  _Cohesion score 0.07525807525807526 - nodes in this community are weakly interconnected._
+- **Why does `Sessao` connect `Sessao` to `bot.py`, `pdf.py`, `test_checklist.py`, `Status`?**
+  _High betweenness centrality (0.115) - this node is a cross-community bridge._
+- **Are the 17 inferred relationships involving `Checklist` (e.g. with `carregar_sessao()` and `finalizar()`) actually correct?**
+  _`Checklist` has 17 INFERRED edges - model-reasoned connections that need verification._
 - **Should `pdf.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.08235294117647059 - nodes in this community are weakly interconnected._
-- **Why does `Loja` connect `Loja` to `bot.py`, `pdf.py`, `test_bot_fluxo.py`, `Sessao`, `test_checklist.py`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+  _Cohesion score 0.07518796992481203 - nodes in this community are weakly interconnected._
+- **Why does `Loja` connect `test_checklist.py` to `bot.py`, `pdf.py`, `test_bot_fluxo.py`, `Sessao`?**
+  _High betweenness centrality (0.080) - this node is a cross-community bridge._

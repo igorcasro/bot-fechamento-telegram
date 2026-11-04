@@ -8,3 +8,6 @@ arquivo/
 logs/
 # cache local do graphify (caminhos do computador; o graphify recria sozinho)
 graphify-out/cache/
+.vscode/
+# lojas de teste local (regras por dia para experimentar /imprimir)
+lojas-teste/
