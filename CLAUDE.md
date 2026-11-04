@@ -5,14 +5,12 @@ commits e mensagens ao usuário final em **português do Brasil**.
 
 ## O que é o projeto
 
-Bot de Telegram que conduz os checklists de rotina do restaurante **Divino Fogão**
-(Shopping Plaza Campos Gerais, Ponta Grossa/PR). A equipe responde cada etapa pelo
+Bot de Telegram que conduz os checklists de rotina de um restaurante. A equipe responde cada etapa pelo
 Telegram (status, foto, observação) e, ao final, o bot gera um **relatório em PDF** e
 um **resumo em texto**, enviados a um grupo da gerência.
 
-Hoje a equipe faz o fechamento manualmente; o bot substitui esse processo. O modelo do
-relatório vem de um PDF de fechamento (03/11/2026) feito pelo colega que iniciou a
-automação; o código dele não está disponível, só o PDF.
+- Projeto 1 (Divino Fogão - Ponta Grossa/PR): Hoje a equipe faz o fechamento manualmente; o bot substitui esse processo. O modelo do
+relatório vem de um PDF de fechamento repassado pelo dono do restaurante; o código dele não está disponível, só o PDF.
 
 ## Arquitetura
 
@@ -60,10 +58,9 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 
 ## Decisões já tomadas (com o usuário)
 
-- Evoluir a base existente (não recomeçar).
 - **Acesso**: lista de IDs em `ALLOWED_USER_IDS` no `.env`, **vazia = ninguém usa** (negado por
   padrão). Quem não está na lista recebe o próprio ID (`/start` é aberto) para enviar a quem
-  cuida do servidor (o colega do usuário), que o adiciona ao `.env`. O bot relê o `.env` quando o
+  cuida do servidor instalado (no Projeto 1, é o próprio responsável pelo restaurante), que o adiciona ao `.env`. O bot relê o `.env` quando o
   arquivo muda (`Contexto.recarregar_env`), sem reiniciar; vale para `ALLOWED_USER_IDS` e
   `MANAGER_CHAT_ID`.
 - **Uso em conversa privada**: funcionários usam o bot em chat privado (em grupo o Telegram não
@@ -79,7 +76,7 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   `abertura`->`/abrir`, outros usam o nome do tipo). Comandos dinâmicos (`cmd_dinamico`), então
   um novo YAML funciona sem reiniciar. A sessão guarda uma **cópia** do checklist: editar o YAML
   no meio de um checklist em andamento não afeta ele.
-- **Servidor**: notebook **Windows** dedicado no restaurante, sempre na tomada e no Wi-Fi.
+- **Servidor para o Projeto 1**: notebook **Windows** dedicado no restaurante, sempre na tomada e no Wi-Fi.
   `servidor/instalar-windows.ps1` cria uma tarefa agendada `BotChecklistRestaurante` (ao ligar o
   Windows, como SYSTEM, sem login) que roda `iniciar-bot.bat` (reinicia o bot em 15 s se ele
   encerrar) e ajusta a energia (sem suspender; tampa fechada não faz nada). Python deve estar
@@ -90,19 +87,18 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   (falha sem console); use `ping`.
 - Dado o httpx logar a URL com o **token** em nível INFO, `fechamento/logs.py` silencia
   `httpx`/`httpcore`. Não reative esses logs.
-- Possível venda a terceiros: ver `docs/guia-venda.md` (propriedade com o colega e o restaurante,
+- Possível venda a terceiros: ver `docs/guia-venda.md` (no Projeto 1, verificar propriedade com o colega e o restaurante,
   marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
-  o usuário vai editar depois, incluindo dias e atividades.
-- Resumo + PDF vão para **um grupo** do Telegram por enquanto (`MANAGER_CHAT_ID`); pode
-  virar uma pessoa só trocando o ID.
-- **WhatsApp fica para depois**: implementar `CanalEntrega` e adicionar em `ctx.canais`.
-  Não implementar sem o usuário escolher o serviço (API oficial/terceiros, com custo).
+  edição posterior, incluindo dias e atividades, quando um novo modelo de checklist for disponibilizado.
+- Resumo + PDF vão para **um grupo** do Telegram (`MANAGER_CHAT_ID`); pode
+  virar uma pessoa só trocando o ID, caso seja de interesse do usuário.
+- Não implementar integração com WhatsApp.
 - Foto obrigatória/opcional/nenhuma configurada por etapa no YAML.
 - Uma loja hoje, mas com estrutura multi-loja (`LOJA=<id>`, um bot/token por loja).
 - Retenção de fotos/PDFs: **7 dias** (`RETENCAO_DIAS`).
 - Acompanhamento por dia: comandos do bot (`/hoje`, `/dia`). Página web é opcional e só
-  se for fácil (os dados já estão em `resultado.json`).
+  se for de fácil implementação posterior (os dados já estão em `resultado.json`).
 - Impressão: PDFs `/imprimir` (lista vazia) e `/resultado` (lista preenchida), com seções
   separadas e caixas de marcação.
 
@@ -154,3 +150,14 @@ pytest                   # testes
 - Envio por WhatsApp.
 - Testar com um bot real no Telegram (o desenvolvimento aqui foi feito sem rede para o
   Telegram; os testes usam objetos simulados).
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
