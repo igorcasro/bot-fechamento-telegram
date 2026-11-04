@@ -156,3 +156,13 @@ def test_checklist_nao_configurado(loja, tmp_path):
     chat.run(bot.cmd_inicio(chat._update(msg), chat.context))
     assert "ainda não está configurado" in msg.reply_text.await_args.args[0]
     assert chat.sessao is None
+
+
+def test_start_mostra_ids(loja, tmp_path):
+    chat = Chat(loja, tmp_path)
+    msg = novo_msg(text="/start")
+    upd = SimpleNamespace(effective_user=chat.user, effective_message=msg,
+                          effective_chat=SimpleNamespace(id=-1001234567890), callback_query=None)
+    chat.run(bot.cmd_start(upd, chat.context))
+    txt = msg.reply_text.await_args.args[0]
+    assert "Seu ID de usuário: 7" in txt and "ID deste chat: -1001234567890" in txt

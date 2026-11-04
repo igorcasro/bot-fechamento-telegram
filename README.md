@@ -39,6 +39,8 @@ python bot.py
 2. Crie um grupo com o gerente, adicione o bot e coloque o ID do grupo em `MANAGER_CHAT_ID`.
 3. Restrinja quem pode usar em `ALLOWED_USER_IDS` (o `/start` mostra o ID de cada pessoa).
 
+O `/start` mostra "Seu ID de usuário" e "ID deste chat" (use este último, no grupo, em `MANAGER_CHAT_ID`).
+
 > **Onde rodar:** o bot precisa estar ligado na hora do fechamento. O computador do
 > restaurante tende a ser desligado justamente nessa hora (é uma etapa do checklist!),
 > então o ideal é um servidor pequeno sempre ligado (VPS barata, Raspberry Pi, etc.).

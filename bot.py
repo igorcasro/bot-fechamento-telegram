@@ -237,7 +237,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/imprimir [data] [tipo] - lista vazia em PDF para imprimir\n"
         "/resultado [data] [tipo] - lista preenchida em PDF\n"
         "/reenviar [data] [tipo] - reenvia o relatório ao gerente\n\n"
-        f"Seu ID: {update.effective_user.id}"
+        f"Seu ID de usuário: {update.effective_user.id}\n"
+        f"ID deste chat: {update.effective_chat.id}"
     )
 
 
