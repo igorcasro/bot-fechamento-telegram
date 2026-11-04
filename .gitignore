@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+estado.pickle
+arquivo/
+.pytest_cache/
