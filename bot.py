@@ -18,7 +18,7 @@ from functools import wraps
 from pathlib import Path
 
 from dotenv import dotenv_values, load_dotenv
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatType, ParseMode
 from telegram.error import InvalidToken, NetworkError
 from telegram.ext import (
@@ -186,7 +186,7 @@ def texto_etapa(cl: Checklist, s: Sessao) -> str:
     i = s.etapa_atual
     e = cl.etapas[i]
     if e.foto == FOTO_OBRIGATORIA:
-        foto = f"📸 Foto obrigatória ({e.fotos})" if e.fotos > 1 else "📸 Foto obrigatória"
+        foto = f"📸 Fotos obrigatórias ({e.fotos})" if e.fotos > 1 else "📸 Foto obrigatória"
     elif e.foto == FOTO_NENHUMA:
         foto = "Não precisa de foto"
     else:
@@ -337,7 +337,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• data: 05/11 ou 05/11/2026. Sem data, vale hoje.\n"
         "• tipo: fechamento, abertura... Sem tipo, vale fechamento "
         "(só /hoje e /dia mostram todos).\n"
-        "• hora: 18:30 (hora em que o checklist foi iniciado). Use quando houve mais de um "
+        "• hora: 18:30 (hora em que o checklist foi iniciado). Use quando houver mais de um "
         "no mesmo dia; sem hora, vale o mais recente.\n"
         "Exemplos:\n"
         "/hoje\n"
@@ -656,7 +656,7 @@ async def _resultado_do_dia(
         horas = ", ".join(_hhmm(s) for _, s in todos)
         await msg.reply_text(f"Há {len(todos)} {tipo}(s) finalizados em {data_br(d)} "
                              f"(iniciados às {horas}). Enviando o mais recente ({_hhmm(todos[-1][1])}); "
-                             f"para outro, acrescente a hora, ex.: /{comando} {todos[0][1].data} "
+                             f"para outro, acrescente a hora, ex.: /{comando} {data_br(d)} "
                              f"{_hhmm(todos[0][1])}.")
     return salvos[-1]
 
@@ -708,12 +708,44 @@ async def erro(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text("😕 Algo deu errado. Tente de novo ou use /status.")
 
 
+def comandos_menu(ctx: Contexto) -> list[BotCommand]:
+    """Comandos do menu "/" do Telegram: um por checklist dos YAMLs, depois os fixos."""
+    menu = []
+    for tipo in ctx.loja.tipos_disponiveis():
+        try:
+            cl = ctx.loja.checklist(tipo)
+        except ValueError:  # YAML com erro: fica fora do menu (o erro já é logado no início)
+            continue
+        menu.append(BotCommand(cl.comando, f"Iniciar: {cl.nome}"[:256]))
+    menu += [
+        BotCommand("hoje", "Ver o andamento de hoje"),
+        BotCommand("status", "Ver em que etapa estou"),
+        BotCommand("finalizar", "Encerrar o checklist em andamento"),
+        BotCommand("cancelar", "Cancelar o checklist em andamento"),
+        BotCommand("dia", "Ver outro dia: /dia 05/11"),
+        BotCommand("imprimir", "Lista vazia em PDF para imprimir"),
+        BotCommand("resultado", "Lista preenchida em PDF"),
+        BotCommand("reenviar", "Reenviar o relatório ao grupo"),
+        BotCommand("start", "Ajuda e meu ID de usuário"),
+    ]
+    return menu
+
+
+async def publicar_menu(app: Application) -> None:
+    """Registra o menu no Telegram ao iniciar. Falha aqui não deve derrubar o bot."""
+    try:
+        await app.bot.set_my_commands(comandos_menu(app.bot_data["ctx"]))
+    except Exception:
+        log.warning("Não consegui publicar o menu de comandos no Telegram.", exc_info=True)
+
+
 def build_app(token: str, ctx: Contexto) -> Application:
     persistence = PicklePersistence(
         filepath=BASE_DIR / "estado.pickle",
         store_data=PersistenceInput(bot_data=False, user_data=False, callback_data=False),
     )
-    app = Application.builder().token(token).persistence(persistence).build()
+    app = (Application.builder().token(token).persistence(persistence)
+           .post_init(publicar_menu).build())
     app.bot_data["ctx"] = ctx
     ctx.canais.append(TelegramEntrega(app.bot, ctx))
     app.add_handler(CommandHandler("start", cmd_start))

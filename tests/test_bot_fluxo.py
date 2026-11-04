@@ -431,3 +431,26 @@ def test_configuracao_pode_ficar_fora_da_pasta_do_codigo(loja, tmp_path, monkeyp
     ctx = bot.Contexto.do_ambiente()
     assert ctx.loja.checklist("fechamento").nome == "Fechamento Personalizado"
     assert str(ctx.arquivo.raiz).startswith(str(tmp_path / "dados"))
+
+
+def test_menu_de_comandos_inclui_checklists_do_yaml_e_comandos_fixos(loja, tmp_path):
+    """O menu "/" do Telegram lista /fechar (do YAML), os novos checklists e os fixos."""
+    loja2 = copia_loja(loja, tmp_path)
+    (loja2.pasta / "checklists" / "abertura.yaml").write_text(
+        "nome: Abertura da Loja\nsecoes:\n  - nome: A\n    etapas:\n      - titulo: X\n",
+        encoding="utf-8")
+    menu = bot.comandos_menu(novo_ctx(loja2, tmp_path))
+    nomes = [c.command for c in menu]
+    assert {"fechar", "abrir"} <= set(nomes)
+    assert {"hoje", "imprimir", "resultado", "start"} <= set(nomes)
+    assert len(nomes) == len(set(nomes)) and len(nomes) <= 100
+    assert all(1 <= len(c.description) <= 256 for c in menu)
+
+
+def test_publicar_menu_nao_derruba_o_bot_se_o_telegram_falhar(loja, tmp_path):
+    ctx = novo_ctx(loja, tmp_path)
+    bot_ok = SimpleNamespace(set_my_commands=AsyncMock())
+    asyncio.run(bot.publicar_menu(SimpleNamespace(bot=bot_ok, bot_data={"ctx": ctx})))
+    bot_ok.set_my_commands.assert_awaited_once()
+    bot_mau = SimpleNamespace(set_my_commands=AsyncMock(side_effect=RuntimeError("sem rede")))
+    asyncio.run(bot.publicar_menu(SimpleNamespace(bot=bot_mau, bot_data={"ctx": ctx})))
