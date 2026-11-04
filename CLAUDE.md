@@ -92,7 +92,7 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   (falha sem console); use `ping`.
 - Dado o httpx logar a URL com o **token** em nível INFO, `fechamento/logs.py` silencia
   `httpx`/`httpcore`. Não reative esses logs.
-- Possível venda a terceiros: ver `docs/guia-venda.md` (no Projeto 1, verificar propriedade com o colega e o restaurante,
+- Possível venda a terceiros: ver `docs/guia-venda.md` (no Projeto 1, verificar propriedade com o dono do restaurante, que também iniciou a automação (é a mesma pessoa),
   marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
   **O responsável pelo Projeto 1 não deve ver o guia de venda**: entregar a ele só um ZIP gerado com
   `git archive` (seção 12 do guia), que deixa de fora `docs/guia-venda.md`, `CLAUDE.md`,
@@ -143,8 +143,9 @@ pytest                   # testes
 - Fotos do restaurante podem mostrar pessoas/dados; não usar fotos reais em testes,
   fixtures ou no repositório (os testes geram imagens sintéticas).
 - O acesso é negado por padrão: `ALLOWED_USER_IDS` vazio bloqueia todos.
-- O cache do graphify (`graphify-out/cache`) guarda caminhos do computador do usuário e o nome
-  de `docs/guia-venda.md`: não vai em pacote de entrega.
+- `graphify-out/cache/` fica fora do Git (`.gitignore`): guarda caminhos do computador do usuário
+  e o nome de `docs/guia-venda.md`. O `graphify` o recria sozinho. `graphify-out/` inteiro fica
+  fora do pacote de entrega (`.gitattributes`).
 
 ## Git
 

@@ -6,3 +6,5 @@ estado.pickle
 arquivo/
 .pytest_cache/
 logs/
+# cache local do graphify (caminhos do computador; o graphify recria sozinho)
+graphify-out/cache/

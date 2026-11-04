@@ -48,6 +48,12 @@ liberar um funcionário exige editar arquivos num computador (seção 4).
 
 ### 2.1 Quem é dono do código?
 
+No Projeto 1, **uma única pessoa reúne três papéis**: é o **dono do restaurante** (primeiro
+cliente), quem **iniciou a automação** e quem **repassou o modelo do relatório**. Isso simplifica a
+autorização (quem autoriza o uso do nome e da logo é a mesma pessoa), mas exige que o acordo
+seja explícito sobre **o que ele recebe como cliente** (licença de uso, preço ou desconto do
+piloto) e **o que seria dele como co-criador ou sócio** (se for o caso).
+
 Faça estas perguntas e **registre as respostas por escrito** (um acordo simples assinado pelos
 envolvidos já ajuda muito):
 
@@ -56,7 +62,7 @@ envolvidos já ajuda muito):
 | O **responsável pelo Projeto 1** iniciou a automação e repassou o modelo do relatório. Ele se considera dono ou sócio de algo? | Sem acordo, qualquer um pode contestar a venda depois. |
 | Vocês vão **vender juntos**? Como dividem **receita, suporte e decisões**? | É a causa mais comum de briga em parceria informal. |
 | O código dele (que você não viu) entrou neste projeto? | Não entrou: foi usado apenas o **PDF modelo**. Confirme com ele que não há restrição de uso do layout. |
-| O **Divino Fogão** tem algum direito sobre o que foi feito (ex.: fez por contrato, foi pago, é sócio)? | Se o sistema foi desenvolvido a pedido/pago pelo restaurante, o contrato pode atribuir a ele direitos ou exigir autorização. |
+| O **Divino Fogão** (representado pela mesma pessoa) tem algum direito sobre o que foi feito (ex.: pagou, fez por contrato, é sócio)? | Se o sistema foi desenvolvido a pedido/pago pelo restaurante, o contrato pode atribuir a ele direitos ou exigir autorização. |
 | Você tem algum **contrato de trabalho/exclusividade** que dê ao empregador direitos sobre o que você cria? | Verifique antes de comercializar. |
 
 ### 2.2 Marca, logo e conteúdo do Divino Fogão
@@ -243,7 +249,8 @@ de funcionalidades.
 
 Se você for vender junto com o responsável pelo Projeto 1 (ou com qualquer outra pessoa), antes de ganhar o primeiro real definam por escrito:
 
-- **Papéis:** quem vende, quem instala, quem dá suporte, quem programa.
+- **Papéis:** quem vende, quem instala, quem dá suporte, quem programa. No Projeto 1, separe por
+  escrito o que ele recebe como **cliente** do que teria como **sócio** (ele é os dois ao mesmo tempo).
 - **Divisão** de receita e de custos (e se muda conforme o trabalho de cada um).
 - **Propriedade** do código e do layout do relatório; o que acontece se um deles sair.
 - **Decisões** importantes (preço, novos clientes, mudanças grandes) e como resolver divergência.
