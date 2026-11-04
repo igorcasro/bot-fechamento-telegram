@@ -25,11 +25,14 @@ fechamento/
   pdf.py               # gerar_relatorio_pdf() e gerar_lista_pdf() (reportlab)
   arquivo.py           # fotos, resultado.json, retenção (7 dias)
   loja.py              # Loja: nome, local, fuso, logo, checklists
+  logs.py              # log em arquivo com rotação; silencia httpx (a URL contém o token)
   entrega.py           # CanalEntrega (Protocol); TelegramEntrega está em bot.py
 lojas/<id>/            # dados da loja: loja.yaml, logo.png, checklists/<tipo>.yaml
 servidor/              # scripts Windows: iniciar-bot.bat (laço de reinício), instalar/desinstalar
                        # (tarefa agendada + energia), atualizar.bat (git pull + reinício)
-docs/                  # guia-servidor-windows.md e guia-venda.md
+docs/                  # guia-primeiro-teste.md, guia-servidor-windows.md e guia-venda.md
+                       # (guia-venda.md e este CLAUDE.md são INTERNOS: não podem ir ao parceiro
+                       # do Projeto 1; ficam fora do `git archive` via .gitattributes)
 tests/                 # pytest (lógica, PDFs e fluxo completo dos handlers)
 ```
 
@@ -84,7 +87,10 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   Windows, como SYSTEM, sem login) que roda `iniciar-bot.bat` (reinicia o bot em 15 s se ele
   encerrar) e ajusta a energia (sem suspender; tampa fechada não faz nada). Python deve estar
   instalado **para todos os usuários** (SYSTEM não usa o da Microsoft Store). `run_polling` usa
-  `bootstrap_retries=-1` para esperar o Wi-Fi ao ligar. Logs em `logs/` (rotação).
+  `bootstrap_retries=-1`, mas **sem internet no início o bot encerra** (código 1) e quem religa é o
+  laço do `.bat` a cada 15 s; `main()` traduz `InvalidToken`/`NetworkError` em mensagem clara.
+  Logs em `logs/` (rotação). A configuração (`lojas/`) deve ficar **fora** da pasta do código
+  (`LOJAS_DIR`), para atualizações de código não sobrescreverem edições.
   **Esses scripts nunca foram executados em Windows** (desenvolvidos em Linux): ao receber relato
   de problema, trate-os como não verificados. Nunca use `timeout` em `.bat` de tarefa agendada
   (falha sem console); use `ping`.
@@ -92,6 +98,9 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   `httpx`/`httpcore`. Não reative esses logs.
 - Possível venda a terceiros: ver `docs/guia-venda.md` (propriedade com o colega e o restaurante,
   marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
+  **O responsável pelo Projeto 1 não deve ver o guia de venda**: entregar a ele só um ZIP gerado
+  com `git archive` (seção 12 do guia) e **nunca** acesso ao repositório. Não referenciar o guia de
+  venda em README, guias de servidor nem scripts.
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
   o usuário vai editar depois, incluindo dias e atividades.
 - Resumo + PDF vão para **um grupo** do Telegram por enquanto (`MANAGER_CHAT_ID`); pode
@@ -124,8 +133,8 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env     # preencher BOT_TOKEN e MANAGER_CHAT_ID
+pip install -r requirements-dev.txt   # servidor usa só requirements.txt
+cp .env.example .env     # preencher BOT_TOKEN; ALLOWED_USER_IDS e MANAGER_CHAT_ID via /start
 python bot.py            # roda o bot (polling)
 pytest                   # testes
 ```
@@ -152,5 +161,7 @@ pytest                   # testes
 - Checklist de **abertura** e checklists por dia: o usuário vai fornecer.
 - Página web de acompanhamento (opcional) e lembretes automáticos.
 - Envio por WhatsApp.
-- Testar com um bot real no Telegram (o desenvolvimento aqui foi feito sem rede para o
-  Telegram; os testes usam objetos simulados).
+- Testar com um bot real no Telegram: o usuário está fazendo o primeiro teste
+  (`docs/guia-primeiro-teste.md`). O desenvolvimento aqui foi feito sem rede para o Telegram; os
+  testes usam objetos simulados. Corrigir o que o teste real revelar.
+- Decidir como entregar ao Projeto 1 (ZIP com configuração separada; ver guia de venda, seção 12).

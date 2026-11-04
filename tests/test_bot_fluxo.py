@@ -342,3 +342,50 @@ def test_sem_grupo_configurado_mostra_resumo_ao_funcionario(loja, tmp_path):
     textos = " ".join(c.args[0] for c in chat.msgs[-1].reply_text.await_args_list)
     assert "não consegui enviá-lo ao grupo" in textos and "21 não realizadas" in textos
     assert chat.canal.enviados == []
+
+
+def test_main_mensagens_claras_para_token_invalido_e_sem_rede(loja, tmp_path, monkeypatch, caplog):
+    import logging
+
+    from telegram.error import InvalidToken, NetworkError
+
+    monkeypatch.setenv("BOT_TOKEN", "123:abc")
+    monkeypatch.setenv("ALLOWED_USER_IDS", "7")
+    monkeypatch.setenv("MANAGER_CHAT_ID", "-100")
+    monkeypatch.setenv("ARCHIVE_DIR", str(tmp_path / "arq"))
+    monkeypatch.setenv("LOG_DIR", str(tmp_path / "logs"))
+    raiz = logging.getLogger()
+    antes = list(raiz.handlers)
+    try:
+        for erro, trecho in ((InvalidToken("x"), "recusou o BOT_TOKEN"),
+                             (NetworkError("sem wifi"), "Sem conexão com o Telegram")):
+            fake_app = SimpleNamespace(run_polling=lambda **kw: (_ for _ in ()).throw(erro))
+            monkeypatch.setattr(bot, "build_app", lambda token, ctx: fake_app)
+            caplog.clear()
+            try:
+                with caplog.at_level(logging.INFO):
+                    bot.main()
+                raise AssertionError("main() deveria encerrar com SystemExit")
+            except SystemExit as exc:
+                assert exc.code == 1
+            assert trecho in caplog.text
+    finally:
+        for h in list(raiz.handlers):
+            if h not in antes:
+                raiz.removeHandler(h)
+                h.close()
+
+
+def test_configuracao_pode_ficar_fora_da_pasta_do_codigo(loja, tmp_path, monkeypatch):
+    """LOJAS_DIR/ARCHIVE_DIR apontam para fora do projeto: atualizar o código não toca nelas."""
+    config = tmp_path / "bot-config" / "lojas"
+    shutil.copytree(loja.pasta.parent, config)
+    (config / "divino-fogao" / "checklists" / "fechamento.yaml").write_text(
+        "comando: fechar\nnome: Fechamento Personalizado\nsecoes:\n  - nome: A\n    etapas:\n"
+        "      - titulo: Única etapa\n", encoding="utf-8")
+    monkeypatch.setenv("LOJAS_DIR", str(config))
+    monkeypatch.setenv("ARCHIVE_DIR", str(tmp_path / "dados"))
+    monkeypatch.setenv("ALLOWED_USER_IDS", "7")
+    ctx = bot.Contexto.do_ambiente()
+    assert ctx.loja.checklist("fechamento").nome == "Fechamento Personalizado"
+    assert str(ctx.arquivo.raiz).startswith(str(tmp_path / "dados"))

@@ -298,3 +298,68 @@ Antes de ganhar o primeiro real, definam por escrito:
 - Prefere **instalar no cliente** (modelo A) ou **hospedar** (modelo B)?
 - Qual **nome** terá o produto e qual será a identidade visual?
 - Quanto tempo por semana você consegue dedicar a **suporte** sem prejudicar o resto?
+
+---
+
+## 12. Como entregar o software: código, executável ou hospedado
+
+Esta seção responde: "devo passar todo o código, ou entregar um executável em que a pessoa só
+edita valores?". E, no caso do **Projeto 1** (Divino Fogão), **a pessoa responsável pelo
+notebook não deve ver este guia** (nem o `CLAUDE.md`).
+
+### 12.1 O que cada pessoa realmente precisa editar
+
+No dia a dia, o responsável só precisa mexer em **valores**, nunca em código:
+
+- `.env`: token, IDs liberados, grupo dos relatórios;
+- os arquivos `.yaml` dos checklists e da loja.
+
+Isso já é assim hoje. O que falta é **separar** onde esses arquivos ficam do código (veja 12.3)
+e **controlar o que a pessoa recebe** (12.2).
+
+### 12.2 Três jeitos de entregar
+
+| Opção | O que a pessoa recebe | Prós | Contras |
+|---|---|---|---|
+| **1. Pacote ZIP com o código** | Uma pasta com os `.py`; ela só edita `.env` e `.yaml`. | **Funciona hoje**, sem trabalho extra. Fácil de atualizar. | O código Python é legível: quem quiser lê e copia. Não protege o seu trabalho por si só. |
+| **2. Executável (`.exe`)** | Um programa que roda sem Python instalado; pasta de configuração ao lado. | Esconde o código-fonte de quem só quer usar (dificulta, **não impede**: dá para descompilar). Instalação mais simples. | Precisa ser gerado **num Windows** (não dá no Linux), ajustes nos caminhos de arquivos, dados embutidos (fusos, imagens, PDF) e **testes em Windows**. Executável sem assinatura pode ser **barrado pelo Windows (SmartScreen) ou pelo antivírus**; certificado de assinatura é pago. Atualizar exige gerar e substituir o `.exe`. Esforço médio. |
+| **3. Hospedado por você** | Nada instalado: só usa o bot. | **Melhor proteção** do código; atualização e monitoramento centralizados. | Custo de servidor; você vira operador dos dados (LGPD, seção 3.3); precisa de um jeito de ele gerenciar usuários e checklists sem acessar arquivos (seção 4, itens 2 e 3). |
+
+### 12.3 Recomendação
+
+**Projeto 1 (agora): opção 1, com cuidados.**
+
+1. **Não dê acesso ao repositório do GitHub** à pessoa. O histórico do repositório contém este
+   guia (mesmo que o arquivo seja apagado depois, o histórico o guarda). Entregue **um ZIP**.
+2. Gere o ZIP com o próprio Git, que **deixa de fora** este guia e o `CLAUDE.md` (isso está
+   configurado em `.gitattributes`):
+
+```bash
+git archive --format=zip --prefix=bot-fechamento/ -o bot-fechamento-pacote.zip main
+```
+
+   Confira a lista de arquivos do ZIP antes de enviar (`docs/guia-venda.md` e `CLAUDE.md` não
+   devem estar nela). O ZIP também **não inclui o histórico** do Git.
+3. **Configuração fora da pasta do código:** o guia `guia-servidor-windows.md` já orienta a manter
+   `C:\bot-config\lojas` separada. Assim, ele só edita valores, e **você pode trocar o código
+   inteiro** (novo ZIP) sem perder as configurações dele.
+4. **Entregue o código depois do acordo por escrito** (seções 2.1 e 7). Entregar antes enfraquece
+   a sua posição.
+5. Se ele precisar de acesso ao repositório por algum motivo, crie **outro repositório privado
+   só para entrega** com o conteúdo do ZIP (histórico limpo), em vez de dar acesso a este.
+
+**Se este guia já foi enviado a alguém por engano:** o repositório hoje é privado e só você tem
+acesso. Se um dia for necessário remover o guia do histórico, isso exige reescrever o histórico
+(operação destrutiva, que deve ser planejada e confirmada antes). Não é preciso agora.
+
+**Clientes futuros:** prefira a opção **3** (hospedado) ou, no começo, a **1** com contrato que
+proíba cópia e redistribuição. Só considere o **executável (2)** quando houver mais de um cliente
+instalando por conta própria e valer o esforço de testes em Windows e assinatura.
+
+### 12.4 Se quiser o executável
+
+O que precisaria ser feito (não foi feito ainda): ajustar `bot.py` para achar `.env`, `lojas/`,
+`arquivo/` e `logs/` ao lado do `.exe`; gerar com PyInstaller num Windows (de preferência por uma
+rotina automática no GitHub, num runner Windows); testar o `.exe` no notebook (inclusive
+reinício, fusos e PDF com logo); decidir sobre assinatura de código. É um projeto pequeno, mas
+**só vale a pena depois de o bot ter rodado bem por algumas semanas** e de haver motivo comercial.

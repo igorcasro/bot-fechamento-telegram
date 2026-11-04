@@ -19,6 +19,7 @@ from pathlib import Path
 from dotenv import dotenv_values, load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatType, ParseMode
+from telegram.error import InvalidToken, NetworkError
 from telegram.ext import (
     Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler,
     PersistenceInput, PicklePersistence, filters,
@@ -697,9 +698,16 @@ def main() -> None:
     log.info("Loja: %s | checklists: %s | usuários liberados: %d", ctx.loja.nome,
              ", ".join(ctx.loja.tipos_disponiveis()), len(ctx.permitidos))
     try:
-        # bootstrap_retries=-1: se o Wi-Fi ainda não conectou ao ligar o notebook, espera e tenta
-        # de novo em vez de encerrar.
         build_app(token, ctx).run_polling(bootstrap_retries=-1)
+    except InvalidToken:
+        log.error("O Telegram recusou o BOT_TOKEN. Confira o valor no .env "
+                  "(copie de novo do @BotFather, sem espaços nem aspas).")
+        raise SystemExit(1)
+    except NetworkError as exc:
+        # Ex.: notebook acabou de ligar e o Wi-Fi ainda não conectou. Rodando como serviço, o
+        # servidor/iniciar-bot.bat liga o bot de novo em 15 s; rodando a mão, basta repetir.
+        log.warning("Sem conexão com o Telegram (%s). Verifique a internet.", exc)
+        raise SystemExit(1)
     except Exception:
         log.exception("O bot parou por um erro inesperado")
         raise SystemExit(1)
