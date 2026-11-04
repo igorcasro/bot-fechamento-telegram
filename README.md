@@ -123,8 +123,8 @@ lojas/
   andamento mantém as etapas com que começou.
 - **Etapas por dia**: `dias: [seg, qua]`, `datas: [2026-12-24]` (só nessas datas, se não
   houver `dias`) e `exceto: [2026-12-25]`.
-- **Novo tipo de checklist** (ex.: abertura): copie `fechamento.yaml` para `abertura.yaml`
-  (nesta pasta), troque `comando`, `nome` e as etapas. O comando (`/abrir`) **funciona na
+- **Novo tipo de checklist** (ex.: limpeza): copie `abertura.yaml` para `limpeza.yaml`
+  (nesta pasta), troque `tipo`, `comando`, `nome` e as etapas. O comando (`/limpeza`) **funciona na
   hora, sem reiniciar**. O nome do arquivo é o tipo, e o `comando` aceita só letras minúsculas,
   números e `_`. Para o comando aparecer no menu do Telegram, atualize `/setcommands` no
   @BotFather (opcional).
@@ -182,6 +182,6 @@ pytest
 
 ## Próximos passos
 
-- Checklist de abertura e demais checklists (criar o YAML de cada um)
+- Demais checklists além de fechamento e abertura (criar o YAML de cada um)
 - Página web para acompanhar as tarefas por dia (os dados já ficam em `resultado.json`)
 - Lembrete automático se o fechamento não começar até certo horário

@@ -220,11 +220,12 @@ Ainda na conversa privada:
 2. Acrescente uma etapa nova no fim de uma seção, copiando o formato das outras, e salve.
 3. Envie `/hoje`: a etapa nova deve aparecer (sem reiniciar o bot).
 
-### Teste 7 (opcional): um segundo tipo de checklist
+### Teste 7 (opcional): o checklist de abertura
 
-Copie `fechamento.yaml` para `abertura.yaml` (mesma pasta), troque `comando: fechar` por
-`comando: abrir`, `nome:` por "Abertura da Loja" e ajuste as etapas. Envie `/abrir`: deve
-iniciar o checklist de abertura, sem reiniciar o bot.
+Envie `/abrir`: deve iniciar o checklist de abertura (18 etapas em 5 seções, definidas em
+`abertura.yaml`, mesma pasta do `fechamento.yaml`). Para criar um terceiro tipo, copie
+`abertura.yaml` para outro nome (ex.: `limpeza.yaml`), troque `tipo`, `comando`, `nome` e as
+etapas; o novo comando funciona sem reiniciar o bot.
 
 ---
 

@@ -140,7 +140,7 @@ python bot.py            # roda o bot (polling)
 pytest                   # testes
 ```
 
-No Windows (PowerShell): `.venv\Scripts\python.exe -m pytest -v`. A suíte (60 testes) foi executada
+No Windows (PowerShell): `.venv\Scripts\python.exe -m pytest -v`. A suíte (61 testes) foi executada
 em Windows 11 com Python 3.13 em 04/11/2026 e passou inteira. Isso cobre só a lógica, os PDFs e os
 handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendências).
 
@@ -164,7 +164,11 @@ handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendên
 
 - Validar os scripts do `servidor/` num Windows real (reinício sem login, queda do processo,
   tampa fechada) e ajustar o guia conforme o resultado.
-- Checklist de **abertura** e checklists por dia: ainda será fornecido/criado manualmente.
+- Checklist de **abertura** (`/abrir`): criado em 04/11/2026 a partir do PDF "019 - Check List
+  Abertura - Diário" (18 etapas, 5 seções). Por decisão do usuário ficaram de fora a seção 1
+  (representantes), o item 3.5 (mesas e cadeiras), a seção 7 (reunião de alinhamento) e a seção 8
+  (comentário final). Ainda não testado no Telegram real; os horários do PDF estão só nos
+  nomes das seções. Checklists por dia: ainda serão fornecidos/criados manualmente.
 - Página web de acompanhamento (opcional) e lembretes automáticos.
 - Bot real no Telegram: **testado pelo usuário em 04/11/2026** (`/fechar`, `/imprimir`, `/resultado`
   e o menu "/" funcionaram bem). Os testes automatizados usam objetos simulados; corrigir o que o

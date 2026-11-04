@@ -1,0 +1,52 @@
+# Checklist de ABERTURA. Edite à vontade; não precisa mexer em código.
+# Formato das etapas: veja o comentário no topo de fechamento.yaml (foto, fotos, dias, datas...).
+# O comando (/abrir) funciona na hora, sem reiniciar o bot. Alterar este arquivo NÃO afeta um
+# checklist que já está em andamento.
+#
+# Lista inicial: segue o "019 - Check List Abertura - Diário" (Verificação de Padrão de Rede
+# Divino Fogão). Ficaram de fora do PDF original, por decisão do dono do projeto: a seção 1
+# (representantes da loja), o item 3.5 (mesas e cadeiras) e a seção 7 (reunião de alinhamento);
+# também a seção 8 (comentário final, campo livre). O item 2.4 (contatos das empresas
+# responsáveis) virou instrução da etapa de sistema de caixa.
+
+tipo: abertura   # precisa ser igual ao nome do arquivo
+comando: abrir   # comando do Telegram que inicia este checklist (/abrir)
+nome: "Abertura da Loja"
+
+secoes:
+  - nome: "SISTEMA DE CAIXA (ATÉ 08:00)"
+    etapas:
+      - titulo: "Caixas ligados"
+      - titulo: "Balanças ligadas e taradas"
+        instrucao: "Tara padrão: 600 g."
+      - titulo: "Sistema de caixa aberto e testado"
+        instrucao: "Se houver problema neste grupo, contate a empresa responsável pelo equipamento ou sistema."
+        foto: opcional
+
+  - nome: "HIGIENIZAÇÃO INICIAL (08:00 ÀS 09:00)"
+    etapas:
+      - titulo: "Pratos higienizados em quantidade suficiente para a demanda"
+      - titulo: "Polimento das pistas e cobres"
+      - titulo: "Talheres higienizados e ensacados em quantidade suficiente"
+        instrucao: "Quantidade para a demanda: 6 baldes."
+      - titulo: "Frente de loja/salão limpo e organizado"
+
+  - nome: "ESTRUTURA DA LOJA (09:00 ÀS 10:00)"
+    etapas:
+      - titulo: "Televisores ligados e funcionando"
+      - titulo: "Luminoso ligado e funcionando"
+      - titulo: "Placas de aquecimento do fogão de atendimento ligadas e funcionando"
+      - titulo: "Pistas de salada e sobremesas ligadas e funcionando"
+      - titulo: "Geladeira de bebidas abastecida de acordo com o padrão da rede"
+
+  - nome: "VERIFICAÇÃO DA CHOPEIRA (09:00 ÀS 10:00)"
+    etapas:
+      - titulo: "Cilindro de gás aberto"
+      - titulo: "Barril de chopp engatado"
+      - titulo: "Chopeira testada e funcionando"
+
+  - nome: "MONTAGEM DO BUFÊ (ATÉ 11:00)"
+    etapas:
+      - titulo: "Pista de salada montada"
+      - titulo: "Pista de sobremesas/bebidas montada"
+      - titulo: "Bufê quente montado"

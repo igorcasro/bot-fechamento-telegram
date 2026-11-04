@@ -16,7 +16,20 @@ def test_checklist_real_segue_o_pdf(loja):
 def test_loja_carrega_logo_e_fuso(loja):
     assert loja.nome == "Divino Fogão"
     assert loja.logo and loja.logo.is_file()
-    assert loja.tipos_disponiveis() == ["fechamento"]
+    assert loja.tipos_disponiveis() == ["abertura", "fechamento"]
+
+
+def test_checklist_abertura_real_segue_o_pdf(loja):
+    c = loja.checklist("abertura")
+    assert c.nome == "Abertura da Loja"
+    assert loja.tipo_por_comando("abrir") == "abertura"
+    assert len(c.etapas) == 18
+    nomes = [n for n, _ in c.secoes()]
+    assert len(nomes) == 5 and nomes[0].startswith("SISTEMA DE CAIXA")
+    titulos = [e.titulo for e in c.etapas]
+    # itens retirados do modelo: representantes (1), mesas e cadeiras (3.5), reunião (7)
+    assert not any("Mesas" in t or "Feedback" in t or "Reforço" in t for t in titulos)
+    assert "Chopeira testada e funcionando" in titulos
 
 
 def test_secoes_indices_globais(cl):

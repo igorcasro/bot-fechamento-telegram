@@ -265,7 +265,7 @@ resumo e o PDF**, e que **nenhuma foto** apareceu solta na conversa.
 | **Remover um funcionário** | Apague o número de `ALLOWED_USER_IDS` e salve. |
 | **Trocar o grupo dos relatórios** | Troque o número em `MANAGER_CHAT_ID` e salve. Também **não precisa reiniciar**. |
 | **Editar etapas do checklist** | Edite `C:\bot-config\lojas\divino-fogao\checklists\fechamento.yaml` (ou `C:\bot-fechamento\lojas\...`, se não separou a configuração). Use o Bloco de Notas; o recuo é feito com **espaços, nunca Tab**. Vale para os **próximos** checklists, sem reiniciar. Teste com `/hoje` no Telegram. |
-| **Criar outro checklist (ex.: abertura)** | Copie `fechamento.yaml` para `abertura.yaml` na mesma pasta e ajuste. O comando (`/abrir`) funciona na hora. |
+| **Criar outro checklist (ex.: limpeza)** | Copie `abertura.yaml` para `limpeza.yaml` na mesma pasta e ajuste `tipo`, `comando`, `nome` e as etapas. O comando (`/limpeza`) funciona na hora. |
 | **Ver o que aconteceu** | `C:\bot-fechamento\logs\bot.log`. O log guarda no máximo ~6 MB (apaga os mais antigos sozinho). |
 | **Atualizar o bot** | Se instalou com Git: clique direito em `servidor\atualizar.bat` → **Executar como administrador**. Com ZIP: extraia o novo ZIP em outra pasta e copie o conteúdo por cima de `C:\bot-fechamento`, **exceto a pasta `lojas\`** (se a configuração está em `C:\bot-config`, nada a preservar). O `.env`, `arquivo\` e `estado.pickle` não vêm no ZIP, então não são afetados. Depois reinicie a tarefa (ou o notebook). |
 | **Fotos antigas** | Apagadas sozinhas após 7 dias. Nada a fazer. |

@@ -66,9 +66,9 @@
     "semantic_hash": ""
   },
   "lojas/divino-fogao/checklists/fechamento.yaml": {
-    "mtime": 1793823381.555783,
-    "seen": 1793824038.0371792,
-    "ast_hash": "4c3ef363c2850209e6331fd3053cf36e",
+    "mtime": 1793834045.7974477,
+    "seen": 1793834063.2345955,
+    "ast_hash": "6c259390f8663f936582ea303f9f21c1",
     "semantic_hash": ""
   },
   "lojas/divino-fogao/loja.yaml": {
@@ -96,15 +96,15 @@
     "semantic_hash": ""
   },
   "tests/test_bot_fluxo.py": {
-    "mtime": 1793824015.483974,
-    "seen": 1793824038.0371852,
-    "ast_hash": "4a0136400493fad32514739e05937bbb",
+    "mtime": 1793834003.4860873,
+    "seen": 1793834063.2346041,
+    "ast_hash": "cb5e2b479533644ccb7d1d62d79684c6",
     "semantic_hash": ""
   },
   "tests/test_checklist.py": {
-    "mtime": 1793814658.9867868,
-    "seen": 1793824038.0371866,
-    "ast_hash": "99e238e6f1ff5c2f461017b316124f23",
+    "mtime": 1793834003.6369276,
+    "seen": 1793834063.2346053,
+    "ast_hash": "8fae91f768455a49a9fb6cfcbc6c5551",
     "semantic_hash": ""
   },
   "tests/test_logs.py": {
@@ -138,27 +138,27 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793821110.4616847,
-    "seen": 1793824038.0371938,
-    "ast_hash": "b8e23d17a18257a6cb02a867b66b3ea0",
+    "mtime": 1793834040.0452428,
+    "seen": 1793834063.2346144,
+    "ast_hash": "4c505b2ef3853c0866ede23612db03f9",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793821407.791615,
-    "seen": 1793824038.0371952,
-    "ast_hash": "74ba67687b174424741e7b35409a0aeb",
+    "mtime": 1793834039.6681218,
+    "seen": 1793834063.2346158,
+    "ast_hash": "c0c438ac9d9ceb8e14db63a5ab752403",
     "semantic_hash": ""
   },
   "docs/guia-primeiro-teste.md": {
-    "mtime": 1793821110.464727,
-    "seen": 1793824038.0371966,
-    "ast_hash": "f93db92d578ce6585528203a4c90d5c2",
+    "mtime": 1793834039.7438822,
+    "seen": 1793834063.234618,
+    "ast_hash": "51ede9074430b2754c412efff696fb78",
     "semantic_hash": ""
   },
   "docs/guia-servidor-windows.md": {
-    "mtime": 1793821110.4657323,
-    "seen": 1793824038.0371978,
-    "ast_hash": "e5b599afcfc3f39028e53c5ce396bfc8",
+    "mtime": 1793834039.8367946,
+    "seen": 1793834063.2346191,
+    "ast_hash": "deb820b230d4f9802638e8d6e342ab7f",
     "semantic_hash": ""
   },
   "docs/guia-venda.md": {
@@ -183,6 +183,12 @@
     "mtime": 1793753788.0,
     "seen": 1793824038.0372026,
     "ast_hash": "4f0b518c764cf04fc2cb6ce08a1541df",
+    "semantic_hash": ""
+  },
+  "lojas/divino-fogao/checklists/abertura.yaml": {
+    "mtime": 1793833977.028528,
+    "seen": 1793834063.234593,
+    "ast_hash": "08e6b3fff58f9c9c5d2275b36e2e9a96",
     "semantic_hash": ""
   }
 }

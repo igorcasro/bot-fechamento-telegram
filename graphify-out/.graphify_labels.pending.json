@@ -5,10 +5,15 @@
   "3": "test_bot_fluxo.py",
   "4": "Sessao",
   "5": "Status",
+  "6": "Arquivo",
   "7": "logs.py",
   "8": "fechamento.yaml",
   "9": "entrega.py",
   "10": "desinstalar-windows.ps1",
   "11": "instalar-windows.ps1",
-  "12": "test_checklist.py"
+  "12": "test_checklist.py",
+  "13": "resumo_texto",
+  "14": "gerar_lista_pdf",
+  "15": "abertura.yaml",
+  "16": ".etapa_destino"
 }

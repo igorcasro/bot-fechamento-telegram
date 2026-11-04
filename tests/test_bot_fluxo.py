@@ -223,7 +223,7 @@ def test_foto_com_legenda_em_problema_fecha_sem_pedir_observacao(loja, tmp_path)
 
 def test_checklist_nao_configurado(loja, tmp_path):
     chat = Chat(novo_ctx(loja, tmp_path))
-    msg = chat.comando("abrir")  # a loja só tem fechamento por enquanto
+    msg = chat.comando("limpeza")  # a loja só tem fechamento e abertura por enquanto
     assert "Não conheço esse comando" in msg.reply_text.await_args.args[0]
     assert chat.sessao is None
 
