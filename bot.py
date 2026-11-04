@@ -326,13 +326,25 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         + "\n".join(iniciar_cmds) + "\n"
         "/status - ver a etapa atual\n/finalizar - encerrar com o que já foi feito\n"
         "/cancelar - cancelar o checklist atual\n\n"
-        "Acompanhamento e impressão:\n"
-        "/hoje [tipo] - o que foi feito / falta fazer hoje\n"
-        "/dia <data> [tipo] - o mesmo para outro dia (ex.: /dia 05/11)\n"
-        "/imprimir [data] [tipo] - lista vazia em PDF para imprimir\n"
+        "Acompanhamento e impressão\n"
+        "(entre [ ] = opcional; entre < > = obrigatório)\n"
+        "/hoje [tipo] - o que foi feito e o que falta hoje\n"
+        "/dia <data> [tipo] - o mesmo para outro dia\n"
+        "/imprimir [data] [tipo] - lista vazia em PDF, para imprimir\n"
         "/resultado [data] [tipo] [hora] - lista preenchida em PDF\n"
-        "/reenviar [data] [tipo] [hora] - reenvia o relatório ao grupo\n"
-        "(hora, ex.: 18:30, escolhe um de vários checklists do mesmo dia)\n\n"
+        "/reenviar [data] [tipo] [hora] - reenvia o relatório ao grupo\n\n"
+        "Como preencher:\n"
+        "• data: 05/11 ou 05/11/2026. Sem data, vale hoje.\n"
+        "• tipo: fechamento, abertura... Sem tipo, vale fechamento "
+        "(só /hoje e /dia mostram todos).\n"
+        "• hora: 18:30 (hora em que o checklist foi iniciado). Use quando houve mais de um "
+        "no mesmo dia; sem hora, vale o mais recente.\n"
+        "Exemplos:\n"
+        "/hoje\n"
+        "/dia 05/11\n"
+        "/imprimir 06/11\n"
+        "/resultado\n"
+        "/resultado 05/11 fechamento 18:30\n\n"
         f"Seu ID de usuário: {uid}\nID deste chat: {update.effective_chat.id}"
     )
 
@@ -597,7 +609,8 @@ async def cmd_hoje(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 @somente_autorizados
 async def cmd_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
-        await update.effective_message.reply_text("Uso: /dia <data> [tipo]. Ex.: /dia 05/11 fechamento")
+        await update.effective_message.reply_text("Uso: /dia <data> [tipo]. A data é obrigatória (para hoje, use /hoje). "
+            "Ex.: /dia 05/11 fechamento")
         return
     await _mostrar_dia(update, context, context.args)
 

@@ -36,7 +36,10 @@ ao bot, então o `/fechar` recusa e pede a conversa privada).
 | `/resultado [data] [tipo]` | lista **preenchida** em PDF para imprimir |
 | `/reenviar [data] [tipo] [hora]` | reenvia resumo + PDF ao grupo |
 
-**Parâmetros** (todos opcionais, em qualquer ordem, separados por espaço):
+Convenção: `[entre colchetes]` = opcional; `<entre sinais de menor/maior>` = obrigatório. Por isso
+`/dia` mostra `<data>` (sem data ele seria igual a `/hoje`) e os demais mostram `[data]`.
+
+**Parâmetros** (em qualquer ordem, separados por espaço):
 
 - **data**: `05/11`, `05/11/2026` ou `2026-11-05`. Sem data = hoje.
 - **tipo**: o nome do checklist (`fechamento`, `abertura`...). Sem tipo, `/hoje` e `/dia` mostram
@@ -46,8 +49,21 @@ ao bot, então o `/fechar` recusa e pede a conversa privada).
   dia (nada é sobrescrito: cada um fica guardado separado, por 7 dias). Sem hora, `/hoje` e `/dia`
   mostram **todos** e `/resultado` e `/reenviar` usam o mais recente, avisando os horários dos outros.
 
-Exemplos: `/resultado 05/11`, `/resultado 05/11 abertura`, `/resultado 05/11 18:30`,
-`/imprimir 06/11` (lista vazia do dia 06, com as etapas que valem naquele dia da semana).
+Exemplos (copie e troque pelos seus valores):
+
+| Quero... | Envie |
+|---|---|
+| ver o andamento de hoje | `/hoje` |
+| ver só a abertura de hoje | `/hoje abertura` |
+| ver o dia 5 | `/dia 05/11` |
+| imprimir a lista vazia de amanhã | `/imprimir 06/11` |
+| imprimir o último fechamento de hoje, preenchido | `/resultado` |
+| imprimir o fechamento do dia 5 | `/resultado 05/11` |
+| imprimir o fechamento do dia 5 iniciado às 18:30 | `/resultado 05/11 fechamento 18:30` |
+| reenviar ao grupo o fechamento de hoje iniciado às 22:38 | `/reenviar 22:38` |
+
+`/imprimir` gera a lista com as etapas que valem naquele dia da semana (segundas, feriados etc.
+seguem as regras do YAML).
 
 ## Quem pode usar (lista de acesso)
 

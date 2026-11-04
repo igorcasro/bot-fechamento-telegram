@@ -233,6 +233,7 @@ def test_start_mostra_ids_e_comandos(loja, tmp_path):
     txt = chat.comando("start").reply_text.await_args.args[0]
     assert "Seu ID de usuário: 7" in txt and "ID deste chat: -1001234567890" in txt
     assert "/fechar - Fechamento da Loja" in txt
+    assert "/dia <data> [tipo]" in txt and "/resultado 05/11 fechamento 18:30" in txt
 
 
 # ------------------------------------------------------------------ acesso
