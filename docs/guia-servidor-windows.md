@@ -323,7 +323,9 @@ Para desfazer a instalação do serviço: PowerShell como administrador →
 O bot permite imprimir a lista do dia para preencher **à mão**:
 
 - `/imprimir` → PDF com a lista **vazia** (caixas para marcar, seções separadas);
-- `/resultado` → PDF com a lista **preenchida** com o que já foi registrado.
+- `/resultado` → PDF com a lista **preenchida** com o que já foi registrado. Se o checklist foi
+  feito mais de uma vez no dia, o bot envia o mais recente e informa os horários dos outros; para
+  um anterior, acrescente a hora: `/resultado 05/11 18:30`.
 
 Deixe sempre algumas cópias impressas na loja. Se o bot cair na hora do fechamento, a equipe
 preenche o papel, e depois alguém registra no bot ou arquiva o papel.

@@ -110,6 +110,9 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 - Logo do Projeto 1 (`lojas/divino-fogao/logo.png`): versão fornecida pelo responsável (492×145 px).
 - Acompanhamento por dia: comandos do bot (`/hoje`, `/dia`). Página web é opcional e só
   se for de fácil implementação posterior (os dados já estão em `resultado.json`).
+- Vários checklists do mesmo tipo no mesmo dia: cada um tem a própria pasta (`<tipo>_HHMM`) e
+  nada é sobrescrito. `/hoje` e `/dia` mostram todos; `/resultado` e `/reenviar` usam o mais
+  recente, avisam os outros e aceitam `HH:MM` (hora de início) para escolher.
 - Impressão: PDFs `/imprimir` (lista vazia) e `/resultado` (lista preenchida), com seções
   separadas e caixas de marcação.
 

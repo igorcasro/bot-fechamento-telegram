@@ -329,6 +329,36 @@ def test_hoje_de_outro_chat_mostra_checklist_em_andamento(loja, tmp_path):
     assert "✅ 1. Limpeza das caixas de gordura" in txt and "em andamento" in txt
 
 
+def test_dois_fechamentos_no_mesmo_dia_ficam_acessiveis(loja, tmp_path, monkeypatch):
+    from datetime import timedelta
+    base = loja.agora().replace(hour=18, minute=30, second=0, microsecond=0)
+    relogio = {"t": base}
+    monkeypatch.setattr(type(loja), "agora", lambda self: relogio["t"])
+    chat = Chat(novo_ctx(loja, tmp_path))
+    completar(chat, loja)                      # 1º fechamento, 18:30
+    relogio["t"] = base + timedelta(hours=4)   # 22:30
+    completar(chat, loja)                      # 2º fechamento
+    assert len(chat.ctx.arquivo.resultados(base.date(), FECHAMENTO, True)) == 2
+
+    # /hoje mostra os dois, cada um com a hora de início
+    msg = chat.comando("hoje", "fechamento")
+    textos = [c.args[0] for c in msg.reply_text.await_args_list]
+    assert any("Iniciado às 18:30" in x for x in textos) and any("Iniciado às 22:30" in x for x in textos)
+
+    # /resultado sem hora = o mais recente, avisando que há outro
+    msg = chat.comando("resultado")
+    assert "18:30, 22:30" in msg.reply_text.await_args_list[0].args[0]
+    assert "22:30" in msg.reply_document.await_args.kwargs["caption"]
+    # com a hora escolhe o anterior
+    msg = chat.comando("resultado", "18:30")
+    assert "18:30" in msg.reply_document.await_args.kwargs["caption"]
+    # reenviar também aceita a hora; hora inexistente avisa
+    chat.comando("reenviar", "18h30")
+    assert len(chat.canal.enviados) == 3
+    msg = chat.comando("resultado", "10:00")
+    assert "iniciado às 10:00" in msg.reply_text.await_args.args[0]
+
+
 def test_cancelar_descarta_checklist_e_fotos(loja, tmp_path):
     chat = Chat(novo_ctx(loja, tmp_path))
     chat.comando("fechar")

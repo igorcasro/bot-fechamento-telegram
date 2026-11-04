@@ -34,7 +34,20 @@ ao bot, então o `/fechar` recusa e pede a conversa privada).
 | `/dia <data> [tipo]` | o mesmo para outro dia (`/dia 05/11`, `/dia 2026-11-05`) |
 | `/imprimir [data] [tipo]` | lista **vazia** em PDF para imprimir |
 | `/resultado [data] [tipo]` | lista **preenchida** em PDF para imprimir |
-| `/reenviar [data] [tipo]` | reenvia resumo + PDF ao grupo |
+| `/reenviar [data] [tipo] [hora]` | reenvia resumo + PDF ao grupo |
+
+**Parâmetros** (todos opcionais, em qualquer ordem, separados por espaço):
+
+- **data**: `05/11`, `05/11/2026` ou `2026-11-05`. Sem data = hoje.
+- **tipo**: o nome do checklist (`fechamento`, `abertura`...). Sem tipo, `/hoje` e `/dia` mostram
+  todos os tipos; `/imprimir`, `/resultado` e `/reenviar` assumem `fechamento`.
+- **hora** (`22:38` ou `22h38`, só em `/hoje`, `/dia`, `/resultado` e `/reenviar`): escolhe o
+  checklist **iniciado** nesse horário. Útil quando o mesmo checklist foi feito mais de uma vez no
+  dia (nada é sobrescrito: cada um fica guardado separado, por 7 dias). Sem hora, `/hoje` e `/dia`
+  mostram **todos** e `/resultado` e `/reenviar` usam o mais recente, avisando os horários dos outros.
+
+Exemplos: `/resultado 05/11`, `/resultado 05/11 abertura`, `/resultado 05/11 18:30`,
+`/imprimir 06/11` (lista vazia do dia 06, com as etapas que valem naquele dia da semana).
 
 ## Quem pode usar (lista de acesso)
 

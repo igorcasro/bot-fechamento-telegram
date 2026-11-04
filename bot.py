@@ -11,6 +11,7 @@ import asyncio
 import html
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from functools import wraps
@@ -329,8 +330,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/hoje [tipo] - o que foi feito / falta fazer hoje\n"
         "/dia <data> [tipo] - o mesmo para outro dia (ex.: /dia 05/11)\n"
         "/imprimir [data] [tipo] - lista vazia em PDF para imprimir\n"
-        "/resultado [data] [tipo] - lista preenchida em PDF\n"
-        "/reenviar [data] [tipo] - reenvia o relatório ao grupo\n\n"
+        "/resultado [data] [tipo] [hora] - lista preenchida em PDF\n"
+        "/reenviar [data] [tipo] [hora] - reenvia o relatório ao grupo\n"
+        "(hora, ex.: 18:30, escolhe um de vários checklists do mesmo dia)\n\n"
         f"Seu ID de usuário: {uid}\nID deste chat: {update.effective_chat.id}"
     )
 
@@ -520,17 +522,32 @@ def _data_arg(txt: str, hoje: date) -> date | None:
         return None
 
 
-def _args(ctx: Contexto, args: list[str]) -> tuple[date, str | None]:
-    """Interpreta '[data] [tipo]' em qualquer ordem. Sem data = hoje."""
+def _hora_arg(txt: str) -> str | None:
+    """Aceita HH:MM ou HHhMM (ex.: 22:38, 22h38) e devolve 'HH:MM'."""
+    m = re.fullmatch(r"(\d{1,2})[:hH](\d{2})", txt)
+    if m and int(m[1]) < 24 and int(m[2]) < 60:
+        return f"{int(m[1]):02d}:{m[2]}"
+    return None
+
+
+def _args(ctx: Contexto, args: list[str]) -> tuple[date, str | None, str | None]:
+    """Interpreta '[data] [tipo] [hora]' em qualquer ordem. Sem data = hoje.
+
+    A hora (HH:MM) escolhe, entre vários checklists do mesmo tipo no dia, o iniciado nela."""
     hoje = ctx.loja.agora().date()
-    d, tipo = hoje, None
+    d, tipo, hhmm = hoje, None, None
     for a in args:
-        dd = _data_arg(a, hoje)
-        if dd:
+        if hh := _hora_arg(a):
+            hhmm = hh
+        elif dd := _data_arg(a, hoje):
             d = dd
         else:
             tipo = a.lower()
-    return d, tipo
+    return d, tipo, hhmm
+
+
+def _hhmm(s: Sessao) -> str:
+    return f"{datetime.fromisoformat(s.iniciado_em):%H:%M}"
 
 
 async def _responder_tipo_invalido(msg, ctx: Contexto, tipo: str | None) -> bool:
@@ -545,7 +562,7 @@ async def _mostrar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE, args:
     """Mostra o plano do dia e o que já foi feito (inclusive checklists em andamento
     iniciados por qualquer pessoa, pois tudo é lido do arquivo)."""
     ctx, msg = ctx_de(context), update.effective_message
-    d, tipo = _args(ctx, args)
+    d, tipo, hhmm = _args(ctx, args)
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
     for t in ([tipo] if tipo else ctx.loja.tipos_disponiveis()):
@@ -555,13 +572,21 @@ async def _mostrar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE, args:
             await msg.reply_text(f"{t}: erro de configuração no checklist. Avise o responsável.")
             continue
         salvos = ctx.arquivo.resultados(d, t)
-        s = None
-        if salvos:
-            cl, s = salvos[-1]  # usa as etapas como estavam naquele dia
-        if not cl.etapas:
-            await msg.reply_text(f"{t}: sem etapas em {data_br(d)}.")
+        if hhmm:
+            salvos = [x for x in salvos if _hhmm(x[1]) == hhmm]
+        if not salvos:
+            if not cl.etapas:
+                await msg.reply_text(f"{t}: sem etapas em {data_br(d)}.")
+            elif hhmm:
+                await msg.reply_text(f"{t}: nenhum checklist iniciado às {hhmm} em {data_br(d)}.")
+            else:
+                await enviar_longo(msg, progresso_texto(cl, None))
             continue
-        await enviar_longo(msg, progresso_texto(cl, s))
+        for cl_salvo, s in salvos:  # todos os do dia, com as etapas como estavam
+            texto = progresso_texto(cl_salvo, s)
+            if len(salvos) > 1:
+                texto = f"🕒 Iniciado às {_hhmm(s)}\n{texto}"
+            await enviar_longo(msg, texto)
 
 
 @somente_autorizados
@@ -585,7 +610,7 @@ async def _enviar_pdf(msg, caminho: Path, legenda: str) -> None:
 @somente_autorizados
 async def cmd_imprimir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ctx, msg = ctx_de(context), update.effective_message
-    d, tipo = _args(ctx, context.args or [])
+    d, tipo, _ = _args(ctx, context.args or [])
     tipo = tipo or "fechamento"
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
@@ -599,39 +624,55 @@ async def cmd_imprimir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await _enviar_pdf(msg, destino, f"🖨️ {cl.nome} - {data_br(d)} (lista vazia)")
 
 
-def _ultimo_resultado(ctx: Contexto, d: date, tipo: str | None):
+async def _resultado_do_dia(
+    msg, ctx: Contexto, d: date, tipo: str, hhmm: str | None, comando: str
+):
+    """Checklist finalizado pedido: o iniciado em `hhmm` ou, sem hora, o mais recente.
+
+    Havendo mais de um no dia, avisa os horários para escolher com /comando <hora>."""
     salvos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
-    return salvos[-1] if salvos else None
+    if hhmm:
+        salvos = [x for x in salvos if _hhmm(x[1]) == hhmm]
+    if not salvos:
+        quando = f" iniciado às {hhmm}" if hhmm else ""
+        await msg.reply_text(f"Não há resultado finalizado de {tipo}{quando} em {data_br(d)} "
+                             f"(os dados ficam guardados por {ctx.retencao_dias} dias).")
+        return None
+    todos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
+    if not hhmm and len(todos) > 1:
+        horas = ", ".join(_hhmm(s) for _, s in todos)
+        await msg.reply_text(f"Há {len(todos)} {tipo}(s) finalizados em {data_br(d)} "
+                             f"(iniciados às {horas}). Enviando o mais recente ({_hhmm(todos[-1][1])}); "
+                             f"para outro, acrescente a hora, ex.: /{comando} {todos[0][1].data} "
+                             f"{_hhmm(todos[0][1])}.")
+    return salvos[-1]
 
 
 @somente_autorizados
 async def cmd_resultado(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ctx, msg = ctx_de(context), update.effective_message
-    d, tipo = _args(ctx, context.args or [])
+    d, tipo, hhmm = _args(ctx, context.args or [])
     tipo = tipo or "fechamento"
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
-    res = _ultimo_resultado(ctx, d, tipo)
+    res = await _resultado_do_dia(msg, ctx, d, tipo, hhmm, "resultado")
     if not res:
-        await msg.reply_text(f"Não há resultado finalizado de {tipo} em {data_br(d)} "
-                             f"(os dados ficam guardados por {ctx.retencao_dias} dias).")
         return
     cl, s = res
     destino = ctx.arquivo.pasta(s) / f"{tipo}_{s.data}_lista.pdf"
     await asyncio.to_thread(gerar_lista_pdf, ctx.loja, cl, s, destino)
-    await _enviar_pdf(msg, destino, f"🖨️ {cl.nome} - {data_br(d)} (preenchida)")
+    await _enviar_pdf(msg, destino, f"🖨️ {cl.nome} - {data_br(d)} (preenchida, {_hhmm(s)})")
 
 
 @somente_autorizados
 async def cmd_reenviar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ctx, msg = ctx_de(context), update.effective_message
-    d, tipo = _args(ctx, context.args or [])
+    d, tipo, hhmm = _args(ctx, context.args or [])
     tipo = tipo or "fechamento"
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
-    res = _ultimo_resultado(ctx, d, tipo)
+    res = await _resultado_do_dia(msg, ctx, d, tipo, hhmm, "reenviar")
     if not res:
-        await msg.reply_text(f"Não há resultado finalizado de {tipo} em {data_br(d)}.")
         return
     cl, s = res
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
