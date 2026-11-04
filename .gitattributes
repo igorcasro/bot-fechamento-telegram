@@ -6,3 +6,5 @@
 .gitattributes export-ignore
 docs/guia-venda.md export-ignore
 CLAUDE.md export-ignore
+.claude export-ignore
+graphify-out export-ignore

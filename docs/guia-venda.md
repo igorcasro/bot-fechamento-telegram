@@ -12,7 +12,7 @@
 Hoje o sistema é um **protótipo validado (ou em validação) em uma loja**. Antes de vender, você
 precisa resolver, **nesta ordem**:
 
-1. **Quem é dono do quê** (você, seu colega, o restaurante) e deixar isso **por escrito**.
+1. **Quem é dono do quê** (você, o responsável pelo Projeto 1, o restaurante) e deixar isso **por escrito**.
 2. **Tirar a marca do Divino Fogão do produto** e separar o que é "produto" do que é "cliente".
 3. **Escolher o modelo de entrega**: instalar no cliente, hospedar você mesmo ou vender o código.
 4. Cuidar de **contrato e LGPD** (o sistema guarda nomes/IDs de funcionários e fotos do local).
@@ -53,7 +53,7 @@ envolvidos já ajuda muito):
 
 | Pergunta | Por que importa |
 |---|---|
-| **Seu colega** iniciou a automação e criou o modelo do relatório. Ele se considera dono ou sócio de algo? | Sem acordo, qualquer um pode contestar a venda depois. |
+| O **responsável pelo Projeto 1** iniciou a automação e repassou o modelo do relatório. Ele se considera dono ou sócio de algo? | Sem acordo, qualquer um pode contestar a venda depois. |
 | Vocês vão **vender juntos**? Como dividem **receita, suporte e decisões**? | É a causa mais comum de briga em parceria informal. |
 | O código dele (que você não viu) entrou neste projeto? | Não entrou: foi usado apenas o **PDF modelo**. Confirme com ele que não há restrição de uso do layout. |
 | O **Divino Fogão** tem algum direito sobre o que foi feito (ex.: fez por contrato, foi pago, é sócio)? | Se o sistema foi desenvolvido a pedido/pago pelo restaurante, o contrato pode atribuir a ele direitos ou exigir autorização. |
@@ -104,8 +104,10 @@ recebe **direito de uso**, e não o código-fonte, a menos que o contrato diga o
 - Recomendação: **cada cliente tem o seu próprio bot** (criado no `@BotFather` com o nome do
   restaurante). Assim a identidade e o token são do cliente, e um problema num bot não afeta os
   outros.
-- **WhatsApp:** exige a plataforma oficial (Meta) ou serviços de terceiros, com **custo
-  recorrente** e aprovações. Se for requisito do cliente, entra no preço (seção 6).
+- **WhatsApp:** **decisão do projeto: não implementar.** Para registro, ele exigiria a plataforma
+  oficial (Meta) ou serviços de terceiros, com custo recorrente e aprovações. Se um cliente só
+  aceitar WhatsApp, isso é **fora do escopo** e muda a conversa comercial (ou o cliente não é o
+  público-alvo).
 
 ---
 
@@ -185,7 +187,7 @@ Priorizado pelo que mais atrapalha **vender para quem não é técnico**:
 | 8 | **Teste com Telegram real** e um período de observação de erros em produção. | Os testes atuais usam objetos simulados. | Baixo (é o piloto) |
 | 9 | **Manual do funcionário e do gerente**, com prints (1 página cada) e FAQ. | Reduz suporte. | Baixo |
 | 10 | **Painel web** com histórico, filtros e relatórios semanais/mensais. | Diferencial para vender, mas só depois de ter clientes. | Alto |
-| 11 | **WhatsApp** como canal. | Pode ser requisito comercial; tem custo recorrente. | Alto |
+| 11 | ~~WhatsApp como canal~~ | **Fora do escopo** (decisão do projeto). Só reavaliar se virar requisito de venda. | Alto |
 | 12 | **Plataforma multi-cliente hospedada (SaaS)**: banco de dados, login, painel, cobrança, isolamento entre clientes, segurança. | Só vale com muitos clientes. | Muito alto |
 
 ---
@@ -214,9 +216,8 @@ calcular o **piso** e comparar com o que o cliente **ganha**.
 - **Servidor** (modelo B) ou **tempo de instalação** e deslocamento (modelo A).
 - **Seu tempo de implantação** (levantar rotinas, montar checklists, treinar) e **de suporte**.
 - **Impostos e taxas** de pagamento.
-- **Canais pagos** (WhatsApp), se houver.
 - **Backup e monitoramento.**
-- **Divisão com o colega**, se houver.
+- **Divisão de receita** com quem vender junto com você, se houver.
 
 ### 6.2 Fórmula do piso da mensalidade
 
@@ -238,9 +239,9 @@ de funcionalidades.
 
 ---
 
-## 7. Parceria com o seu colega
+## 7. Parceria (se vocês forem vender juntos)
 
-Antes de ganhar o primeiro real, definam por escrito:
+Se você for vender junto com o responsável pelo Projeto 1 (ou com qualquer outra pessoa), antes de ganhar o primeiro real definam por escrito:
 
 - **Papéis:** quem vende, quem instala, quem dá suporte, quem programa.
 - **Divisão** de receita e de custos (e se muda conforme o trabalho de cada um).
@@ -269,32 +270,32 @@ Antes de ganhar o primeiro real, definam por escrito:
 
 | Risco | O que fazer |
 |---|---|
-| **Propriedade indefinida** (colega/restaurante) | Acordo escrito antes de vender (seção 2.1 e 7). |
-| **Dependência do Telegram** ou cliente que só usa WhatsApp | Validar com o cliente; avaliar canal WhatsApp (seção 2.5). |
+| **Propriedade indefinida** (responsável pelo Projeto 1/restaurante) | Acordo escrito antes de vender (seção 2.1 e 7). |
+| **Dependência do Telegram** ou cliente que só usa WhatsApp | Validar com o cliente **antes** de vender; WhatsApp está fora do escopo (seção 2.5). |
 | **Notebook ou Wi-Fi do cliente caem** | Modelo B (servidor seu), monitoramento e plano B impresso. |
 | **Suporte fora do horário comercial** | Definir SLA e preço; automatizar alertas. |
 | **LGPD / fotos de pessoas** | Contrato, aviso à equipe, retenção curta, orientação de fotografar equipamentos. |
 | **Concorrentes** (aplicativos prontos) | Pesquisar preço e recursos; vender o que eles não fazem: simplicidade no Telegram, PDF pronto, impressão. |
-| **Você virar o único ponto de falha** | Documentar, ter o colega treinado, automatizar instalação e monitoramento. |
+| **Você virar o único ponto de falha** | Documentar, ter outra pessoa treinada, automatizar instalação e monitoramento. |
 
 ---
 
 ## 10. Roteiro sugerido
 
-1. **Agora:** acordo com o colega; autorização do Divino Fogão; **piloto de 2 a 4 semanas** no
+1. **Agora:** acordo com o responsável pelo Projeto 1; autorização do Divino Fogão; **piloto de 2 a 4 semanas** no
    restaurante, medindo antes e depois (seção 6.3).
 2. **Produto mínimo:** itens 1, 2, 4, 6, 8 e 9 da seção 4; modelo de contrato; política de privacidade.
 3. **2 ou 3 clientes pagantes**, com instalação por cliente e suporte combinado.
-4. **Decidir com dados:** painel web, WhatsApp ou plataforma multi-cliente, conforme o que os
+4. **Decidir com dados:** painel web ou plataforma multi-cliente, conforme o que os
    clientes pedirem e pagarem.
 
 ---
 
-## 11. Decisões que só você (e seu colega) podem tomar
+## 11. Decisões que só você (e quem for sócio) podem tomar
 
-- Vocês querem **vender juntos**? Em que **proporção**?
+- Você vai vender **sozinho ou com sócio**? Em que **proporção**?
 - O **público** é restaurantes e lanchonetes pequenos, franquias ou outro segmento?
-- **WhatsApp** é obrigatório para o seu primeiro cliente-alvo?
+- O seu primeiro cliente-alvo aceita **Telegram**? (WhatsApp está fora do escopo.)
 - Prefere **instalar no cliente** (modelo A) ou **hospedar** (modelo B)?
 - Qual **nome** terá o produto e qual será a identidade visual?
 - Quanto tempo por semana você consegue dedicar a **suporte** sem prejudicar o resto?

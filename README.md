@@ -123,7 +123,7 @@ fechamento/
   pdf.py                # PDF do relatório e listas para impressão
   arquivo.py            # fotos, resultado.json e retenção
   loja.py               # configuração por loja
-  entrega.py            # interface de canais de entrega (Telegram hoje; WhatsApp depois)
+  entrega.py            # interface do canal de entrega (hoje: Telegram)
   logs.py               # log em arquivo com rotação (e sem o token do bot)
 lojas/                  # dados de cada loja
 servidor/               # scripts Windows: iniciar com o PC, reiniciar se cair, atualizar
@@ -150,7 +150,6 @@ pytest
 
 ## Próximos passos
 
-- Envio por WhatsApp (implementar `CanalEntrega` em `fechamento/entrega.py`)
 - Checklist de abertura e demais checklists (criar o YAML de cada um)
 - Página web para acompanhar as tarefas por dia (os dados já ficam em `resultado.json`)
 - Lembrete automático se o fechamento não começar até certo horário

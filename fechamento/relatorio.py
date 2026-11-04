@@ -1,4 +1,4 @@
-"""Textos de relatório/acompanhamento (resumo para Telegram/WhatsApp e progresso do dia)."""
+"""Textos de relatório/acompanhamento (resumo para o Telegram e progresso do dia)."""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -31,7 +31,7 @@ def dia_semana(d: date) -> str:
 
 
 def resumo_texto(loja: Loja, cl: Checklist, s: Sessao) -> str:
-    """Resumo em texto puro (serve para Telegram e, depois, WhatsApp)."""
+    """Resumo em texto puro, enviado ao grupo do gerente."""
     c = s.contagem(cl)
     linhas = [
         f"📋 {cl.nome} - {loja.nome}",

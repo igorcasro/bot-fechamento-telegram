@@ -23,11 +23,13 @@ fechamento/
   pdf.py               # gerar_relatorio_pdf() e gerar_lista_pdf() (reportlab)
   arquivo.py           # fotos, resultado.json, retenção (7 dias)
   loja.py              # Loja: nome, local, fuso, logo, checklists
+  logs.py              # log em arquivo com rotação; silencia httpx (a URL contém o token)
   entrega.py           # CanalEntrega (Protocol); TelegramEntrega está em bot.py
 lojas/<id>/            # dados da loja: loja.yaml, logo.png, checklists/<tipo>.yaml
 servidor/              # scripts Windows: iniciar-bot.bat (laço de reinício), instalar/desinstalar
                        # (tarefa agendada + energia), atualizar.bat (git pull + reinício)
-docs/                  # guia-servidor-windows.md e guia-venda.md
+docs/                  # guia-primeiro-teste.md, guia-servidor-windows.md e guia-venda.md
+                       # (guia-venda.md é INTERNO: ver a decisão sobre o Projeto 1 abaixo)
 tests/                 # pytest (lógica, PDFs e fluxo completo dos handlers)
 ```
 
@@ -80,8 +82,11 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   `servidor/instalar-windows.ps1` cria uma tarefa agendada `BotChecklistRestaurante` (ao ligar o
   Windows, como SYSTEM, sem login) que roda `iniciar-bot.bat` (reinicia o bot em 15 s se ele
   encerrar) e ajusta a energia (sem suspender; tampa fechada não faz nada). Python deve estar
-  instalado **para todos os usuários** (SYSTEM não usa o da Microsoft Store). `run_polling` usa
-  `bootstrap_retries=-1` para esperar o Wi-Fi ao ligar. Logs em `logs/` (rotação).
+  instalado **para todos os usuários** (SYSTEM não usa o da Microsoft Store). Sem internet ao
+  ligar, o bot **encerra** (código 1; `main()` traduz `InvalidToken`/`NetworkError` em mensagem
+  clara) e o laço do `.bat` o religa a cada 15 s: `bootstrap_retries=-1` **não** cobre esse caso.
+  Logs em `logs/` (rotação). A configuração (`lojas/`) deve ficar **fora** da pasta do código
+  (`LOJAS_DIR`), para atualizações (ZIP ou `git pull`) não sobrescreverem edições.
   **Esses scripts nunca foram executados em Windows** (desenvolvidos em Linux): ao receber relato
   de problema, trate-os como não verificados. Nunca use `timeout` em `.bat` de tarefa agendada
   (falha sem console); use `ping`.
@@ -89,6 +94,10 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   `httpx`/`httpcore`. Não reative esses logs.
 - Possível venda a terceiros: ver `docs/guia-venda.md` (no Projeto 1, verificar propriedade com o colega e o restaurante,
   marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
+  **O responsável pelo Projeto 1 não deve ver o guia de venda**: entregar a ele só um ZIP gerado com
+  `git archive` (seção 12 do guia), que deixa de fora `docs/guia-venda.md`, `CLAUDE.md`,
+  `.claude/` e `graphify-out/` (ver `.gitattributes`), e **nunca** acesso ao repositório (o histórico
+  guarda o guia). Não referenciar o guia de venda em README, guias de servidor nem scripts.
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
   edição posterior, incluindo dias e atividades, quando um novo modelo de checklist for disponibilizado.
 - Resumo + PDF vão para **um grupo** do Telegram (`MANAGER_CHAT_ID`); pode
@@ -97,6 +106,7 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 - Foto obrigatória/opcional/nenhuma configurada por etapa no YAML.
 - Uma loja hoje, mas com estrutura multi-loja (`LOJA=<id>`, um bot/token por loja).
 - Retenção de fotos/PDFs: **7 dias** (`RETENCAO_DIAS`).
+- Logo do Projeto 1 (`lojas/divino-fogao/logo.png`): versão fornecida pelo responsável (492×145 px).
 - Acompanhamento por dia: comandos do bot (`/hoje`, `/dia`). Página web é opcional e só
   se for de fácil implementação posterior (os dados já estão em `resultado.json`).
 - Impressão: PDFs `/imprimir` (lista vazia) e `/resultado` (lista preenchida), com seções
@@ -120,8 +130,8 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env     # preencher BOT_TOKEN e MANAGER_CHAT_ID
+pip install -r requirements-dev.txt   # o servidor usa só requirements.txt (sem pytest)
+cp .env.example .env     # preencher BOT_TOKEN; ALLOWED_USER_IDS e MANAGER_CHAT_ID via /start
 python bot.py            # roda o bot (polling)
 pytest                   # testes
 ```
@@ -133,6 +143,8 @@ pytest                   # testes
 - Fotos do restaurante podem mostrar pessoas/dados; não usar fotos reais em testes,
   fixtures ou no repositório (os testes geram imagens sintéticas).
 - O acesso é negado por padrão: `ALLOWED_USER_IDS` vazio bloqueia todos.
+- O cache do graphify (`graphify-out/cache`) guarda caminhos do computador do usuário e o nome
+  de `docs/guia-venda.md`: não vai em pacote de entrega.
 
 ## Git
 
@@ -143,11 +155,13 @@ pytest                   # testes
 
 - Validar os scripts do `servidor/` num Windows real (reinício sem login, queda do processo,
   tampa fechada) e ajustar o guia conforme o resultado.
-- Logo em `lojas/divino-fogao/logo.png` alterada para a versão utilizada pelo responsável do Projeto 1.
 - Checklist de **abertura** e checklists por dia: ainda será fornecido/criado manualmente.
 - Página web de acompanhamento (opcional) e lembretes automáticos.
-- Testar com um bot real no Telegram (o desenvolvimento aqui foi feito sem rede para o
-  Telegram; os testes usam objetos simulados).
+- Testar com um bot real no Telegram: o usuário está fazendo o primeiro teste
+  (`docs/guia-primeiro-teste.md`). O desenvolvimento aqui foi feito sem rede para o Telegram; os
+  testes usam objetos simulados. Corrigir o que o teste real revelar.
+- Decidir como entregar ao Projeto 1 (ZIP com a configuração fora da pasta do código; ver a
+  seção 12 do guia de venda).
 
 ## graphify
 
@@ -158,4 +172,5 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- Se o `graphify` não estiver instalado (ex.: sessões na nuvem), não é possível consultar nem atualizar o grafo: avise o usuário e não edite `graphify-out/` à mão.
 - A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.

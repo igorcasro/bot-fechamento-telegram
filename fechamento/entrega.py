@@ -1,7 +1,7 @@
 """Canais de entrega do relatório (resumo em texto + PDF).
 
-Hoje só existe o Telegram (implementado em bot.py). Para o WhatsApp, implemente
-`CanalEntrega` e adicione na lista de canais; o restante do código não muda.
+Hoje só existe o Telegram (implementado em bot.py). A interface existe apenas para isolar o
+envio do restante do código. Decisão do projeto: não implementar WhatsApp.
 """
 from __future__ import annotations
 
