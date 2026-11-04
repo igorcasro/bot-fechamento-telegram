@@ -2,7 +2,8 @@
 
 Formato do YAML (veja lojas/divino-fogao/checklists/fechamento.yaml):
 
-    tipo: fechamento
+    tipo: fechamento                # opcional; se existir, deve ser igual ao nome do arquivo
+    comando: fechar                 # opcional: comando do Telegram que inicia (/fechar)
     nome: "Fechamento da Loja"
     secoes:
       - nome: COZINHA
@@ -21,6 +22,7 @@ Com `datas` e sem `dias`, a etapa vale SOMENTE nessas datas.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -32,6 +34,8 @@ DIAS_SEMANA_LONGO = [
     "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
     "sexta-feira", "sábado", "domingo",
 ]
+# comando padrão de cada tipo; os demais usam o próprio nome do tipo (ex.: limpeza -> /limpeza)
+COMANDOS_PADRAO = {"fechamento": "fechar", "abertura": "abrir"}
 FOTO_OBRIGATORIA, FOTO_OPCIONAL, FOTO_NENHUMA = "obrigatoria", "opcional", "nenhuma"
 _FOTO_VALIDAS = {FOTO_OBRIGATORIA, FOTO_OPCIONAL, FOTO_NENHUMA}
 
@@ -89,19 +93,31 @@ class Checklist:
     nome: str
     etapas: list[Etapa]
     data: date | None = None  # preenchido por para_data()
+    comando: str = ""  # comando do Telegram que inicia este checklist (sem a barra)
 
     @classmethod
     def carregar(cls, path: str | Path) -> "Checklist":
         path = Path(path)
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        tipo = raw.get("tipo") or path.stem
+        tipo = path.stem  # o tipo é o nome do arquivo (fechamento.yaml -> "fechamento")
+        if raw.get("tipo", tipo) != tipo:
+            raise ValueError(
+                f"{path.name}: 'tipo' ({raw['tipo']}) deve ser igual ao nome do arquivo ({tipo})."
+            )
+        comando = str(raw.get("comando") or COMANDOS_PADRAO.get(tipo, tipo)).lstrip("/").lower()
+        if not re.fullmatch(r"[a-z0-9_]{1,32}", comando):
+            raise ValueError(
+                f"{path.name}: defina 'comando:' só com letras minúsculas, números e _ "
+                f"(recebi '{comando}')."
+            )
         etapas: list[Etapa] = []
         for sec in raw.get("secoes", []):
             for e in sec.get("etapas", []):
                 etapas.append(cls._etapa(sec.get("nome", ""), e))
         if not etapas:
             raise ValueError(f"{path.name}: o checklist precisa ter pelo menos uma etapa.")
-        return cls(tipo=tipo, nome=raw.get("nome", tipo.capitalize()), etapas=etapas)
+        return cls(tipo=tipo, nome=raw.get("nome", tipo.capitalize()), etapas=etapas,
+                   comando=comando)
 
     @staticmethod
     def _etapa(secao: str, e: dict) -> Etapa:
@@ -128,7 +144,7 @@ class Checklist:
     def para_data(self, d: date) -> "Checklist":
         """Checklist só com as etapas que valem naquela data."""
         return Checklist(
-            tipo=self.tipo, nome=self.nome, data=d,
+            tipo=self.tipo, nome=self.nome, data=d, comando=self.comando,
             etapas=[e for e in self.etapas if e.vale_em(d)],
         )
 
@@ -143,7 +159,7 @@ class Checklist:
 
     def to_dict(self) -> dict:
         return {
-            "tipo": self.tipo, "nome": self.nome,
+            "tipo": self.tipo, "nome": self.nome, "comando": self.comando,
             "data": self.data.isoformat() if self.data else None,
             "etapas": [e.to_dict() for e in self.etapas],
         }
@@ -151,7 +167,7 @@ class Checklist:
     @classmethod
     def from_dict(cls, d: dict) -> "Checklist":
         return cls(
-            tipo=d["tipo"], nome=d["nome"],
+            tipo=d["tipo"], nome=d["nome"], comando=d.get("comando", ""),
             data=date.fromisoformat(d["data"]) if d.get("data") else None,
             etapas=[Etapa.from_dict(e) for e in d["etapas"]],
         )

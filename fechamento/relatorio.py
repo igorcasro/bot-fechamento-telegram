@@ -67,7 +67,8 @@ def progresso_texto(cl: Checklist, s: Sessao | None) -> str:
     if s is not None:
         c = s.contagem(cl)
         feitas = len(cl.etapas) - c[Status.NAO_REALIZADO]
-        linhas.append(f"Progresso: {feitas}/{len(cl.etapas)} · 👤 {s.responsavel}")
+        situacao = "finalizado" if s.encerrada else "em andamento"
+        linhas.append(f"Progresso: {feitas}/{len(cl.etapas)} ({situacao}) · 👤 {s.responsavel}")
     else:
         linhas.append(f"Nada registrado ainda · {len(cl.etapas)} etapa(s)")
     for nome, etapas in cl.secoes():

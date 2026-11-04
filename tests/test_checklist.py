@@ -45,7 +45,7 @@ def test_vale_em_somente_datas_e_exceto():
 
 
 def test_para_data_filtra_etapas(tmp_path):
-    arq = tmp_path / "t.yaml"
+    arq = tmp_path / "teste.yaml"
     arq.write_text(
         "tipo: teste\nnome: Teste\nsecoes:\n  - nome: A\n    etapas:\n"
         "      - titulo: Sempre\n"
@@ -76,3 +76,41 @@ def test_roundtrip_dict(cl):
     c2 = Checklist.from_dict(cl.to_dict())
     assert [e.titulo for e in c2.etapas] == [e.titulo for e in cl.etapas]
     assert c2.data == cl.data
+
+
+def test_comando_padrao_e_personalizado(tmp_path, loja):
+    assert loja.checklist("fechamento").comando == "fechar"
+    (tmp_path / "abertura.yaml").write_text(
+        "secoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    (tmp_path / "limpeza_geral.yaml").write_text(
+        "comando: limpar\nsecoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    (tmp_path / "semanal.yaml").write_text(
+        "secoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    assert Checklist.carregar(tmp_path / "abertura.yaml").comando == "abrir"
+    assert Checklist.carregar(tmp_path / "limpeza_geral.yaml").comando == "limpar"
+    assert Checklist.carregar(tmp_path / "semanal.yaml").comando == "semanal"
+
+
+def test_tipo_deve_ser_igual_ao_arquivo_e_comando_valido(tmp_path):
+    (tmp_path / "a.yaml").write_text(
+        "tipo: outro\nsecoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        Checklist.carregar(tmp_path / "a.yaml")
+    (tmp_path / "limpeza-geral.yaml").write_text(
+        "secoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    with pytest.raises(ValueError):  # hífen não vale como comando do Telegram
+        Checklist.carregar(tmp_path / "limpeza-geral.yaml")
+
+
+def test_loja_tipo_por_comando_e_validar(loja, tmp_path):
+    import shutil
+    from fechamento.loja import Loja
+    shutil.copytree(loja.pasta, tmp_path / "x")
+    (tmp_path / "x" / "checklists" / "quebrado.yaml").write_text("secoes: []\n", encoding="utf-8")
+    (tmp_path / "x" / "checklists" / "abertura.yaml").write_text(
+        "secoes:\n  - nome: A\n    etapas:\n      - titulo: Abrir portas\n", encoding="utf-8")
+    nova = Loja.carregar(tmp_path, "x")
+    assert nova.tipo_por_comando("fechar") == "fechamento"
+    assert nova.tipo_por_comando("abrir") == "abertura"
+    assert nova.tipo_por_comando("nada") is None
+    assert [t for t, _ in nova.validar()] == ["quebrado"]

@@ -9,9 +9,14 @@
 #   datas: [2026-12-24]        nessas datas específicas (sem `dias` = SOMENTE nelas)
 #   exceto: [2026-12-25]       não aparece nessas datas
 #
+# Para criar OUTRO checklist (ex.: abertura): copie este arquivo para abertura.yaml (nesta
+# mesma pasta), troque tipo/comando/nome/etapas. O comando (/abrir) funciona na hora, sem
+# reiniciar o bot. Alterar este arquivo NÃO afeta um checklist que já está em andamento.
+#
 # Lista inicial: segue o relatório de fechamento de 03/11/2026.
 
-tipo: fechamento
+tipo: fechamento   # precisa ser igual ao nome do arquivo
+comando: fechar    # comando do Telegram que inicia este checklist (/fechar)
 nome: "Fechamento da Loja"
 
 secoes:

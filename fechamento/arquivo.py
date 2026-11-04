@@ -48,8 +48,13 @@ class Arquivo:
         )
         return arq
 
-    def resultados(self, d: date, tipo: str | None = None) -> list[tuple[Checklist, Sessao]]:
-        """Resultados salvos de um dia, do mais antigo ao mais recente."""
+    def resultados(
+        self, d: date, tipo: str | None = None, apenas_finalizados: bool = False
+    ) -> list[tuple[Checklist, Sessao]]:
+        """Sessões salvas de um dia, da mais antiga à mais recente.
+
+        O resultado.json é gravado a cada resposta, então inclui checklists em andamento
+        (finalizado_em vazio), o que permite acompanhar o dia a partir de qualquer chat."""
         out = []
         base = self.raiz / d.isoformat()
         if not base.is_dir():
@@ -57,9 +62,13 @@ class Arquivo:
         for arq in sorted(base.glob("*/resultado.json")):
             raw = json.loads(arq.read_text(encoding="utf-8"))
             cl, s = Checklist.from_dict(raw["checklist"]), Sessao.from_dict(raw["sessao"])
-            if tipo is None or s.tipo == tipo:
+            if (tipo is None or s.tipo == tipo) and (not apenas_finalizados or s.encerrada):
                 out.append((cl, s))
         return sorted(out, key=lambda x: x[1].iniciado_em)
+
+    def apagar_sessao(self, s: Sessao) -> None:
+        """Remove fotos e dados de uma sessão (usado ao cancelar um checklist)."""
+        shutil.rmtree(self.raiz / s.pasta, ignore_errors=True)
 
     def limpar_antigos(self, hoje: date, dias: int) -> list[str]:
         """Apaga pastas de dias com mais de `dias` dias. Retorna os nomes removidos."""

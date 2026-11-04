@@ -1,8 +1,9 @@
 """Bot do Telegram para os checklists do restaurante (fechamento, abertura, ...).
 
-Fluxo: /fechar -> o bot mostra uma etapa por vez com botões (Concluído / Problema /
-Não se aplica), pede foto e observação quando preciso e, no fim, envia ao grupo do
-gerente um resumo em texto + o relatório em PDF.
+Fluxo: o funcionário usa o bot em CONVERSA PRIVADA (/fechar, /abrir...). A cada etapa o bot
+mostra botões (Concluído / Problema / Não se aplica) e pede foto/observação quando preciso.
+No fim, o resumo em texto + o PDF (com as fotos) vão para o grupo do gerente. As fotos nunca
+são devolvidas na conversa: só aparecem dentro do PDF.
 """
 from __future__ import annotations
 
@@ -15,9 +16,9 @@ from datetime import date, datetime
 from functools import wraps
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ParseMode
+from telegram.constants import ChatType, ParseMode
 from telegram.ext import (
     Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler,
     PersistenceInput, PicklePersistence, filters,
@@ -32,28 +33,43 @@ from fechamento.relatorio import ICONE, ROTULO, data_br, progresso_texto, resumo
 from fechamento.sessao import EstadoInvalido, Sessao, Status
 
 BASE_DIR = Path(__file__).parent
+ENV_ENCODING = "utf-8-sig"  # tolera arquivo salvo com BOM pelo Bloco de Notas
 log = logging.getLogger("checklist-bot")
 
-# comando -> tipo de checklist (arquivo lojas/<loja>/checklists/<tipo>.yaml)
-COMANDOS_INICIO = {"fechar": "fechamento", "abrir": "abertura"}
 STATUS_BOTAO = {"c": Status.CONCLUIDO, "p": Status.PROBLEMA, "n": Status.NAO_SE_APLICA}
 
 
 # ------------------------------------------------------------------ contexto
+def parse_ids(txt: str) -> set[int]:
+    """'111, 222,abc' -> {111, 222} (valores inválidos são ignorados com aviso)."""
+    ids = set()
+    for parte in txt.replace(";", ",").split(","):
+        parte = parte.strip()
+        if not parte:
+            continue
+        try:
+            ids.add(int(parte))
+        except ValueError:
+            log.warning("ALLOWED_USER_IDS: '%s' não é um ID válido (ignorado).", parte)
+    return ids
+
+
 class TelegramEntrega:
-    """Entrega o resumo e o PDF em um chat/grupo do Telegram."""
+    """Entrega o resumo e o PDF no grupo/chat do gerente (MANAGER_CHAT_ID)."""
 
     nome = "telegram"
 
-    def __init__(self, bot, chat_id: str):
-        self.bot, self.chat_id = bot, chat_id
+    def __init__(self, bot, ctx: "Contexto"):
+        self.bot, self.ctx = bot, ctx
 
     async def enviar(self, resumo: str, pdf: Path) -> None:
-        await self.bot.send_message(self.chat_id, resumo)
+        chat = self.ctx.gerente_chat  # lido na hora: trocar o grupo no .env vale sem reiniciar
+        if not chat:
+            raise RuntimeError("MANAGER_CHAT_ID não está configurado.")
+        await self.bot.send_message(chat, resumo)
         with pdf.open("rb") as f:
-            await self.bot.send_document(
-                self.chat_id, document=f, filename=pdf.name, caption="📄 Relatório em PDF"
-            )
+            await self.bot.send_document(chat, document=f, filename=pdf.name,
+                                         caption="📄 Relatório em PDF")
 
 
 @dataclass
@@ -61,56 +77,101 @@ class Contexto:
     loja: Loja
     arquivo: Arquivo
     gerente_chat: str | None = None
-    permitidos: set[int] = field(default_factory=set)
+    permitidos: set[int] = field(default_factory=set)  # vazio = NINGUÉM tem acesso
     retencao_dias: int = 7
     canais: list[CanalEntrega] = field(default_factory=list)
+    env_path: Path | None = None
+    _env_mtime: float = 0.0
 
     @classmethod
     def do_ambiente(cls) -> "Contexto":
         loja = Loja.carregar(os.getenv("LOJAS_DIR", BASE_DIR / "lojas"),
                              os.getenv("LOJA", "divino-fogao"))
         arquivo = Arquivo(Path(os.getenv("ARCHIVE_DIR", BASE_DIR / "arquivo")) / loja.id)
-        permitidos = {int(x) for x in os.getenv("ALLOWED_USER_IDS", "").replace(" ", "").split(",") if x}
-        return cls(
+        env = BASE_DIR / ".env"
+        ctx = cls(
             loja=loja, arquivo=arquivo, gerente_chat=os.getenv("MANAGER_CHAT_ID") or None,
-            permitidos=permitidos, retencao_dias=int(os.getenv("RETENCAO_DIAS", "7")),
+            permitidos=parse_ids(os.getenv("ALLOWED_USER_IDS", "")),
+            retencao_dias=int(os.getenv("RETENCAO_DIAS", "7")),
+            env_path=env if env.is_file() else None,
         )
+        if ctx.env_path:
+            ctx._env_mtime = ctx.env_path.stat().st_mtime
+        return ctx
+
+    def recarregar_env(self) -> None:
+        """Relê ALLOWED_USER_IDS e MANAGER_CHAT_ID se o .env mudou (sem reiniciar o bot)."""
+        if not self.env_path or not self.env_path.is_file():
+            return
+        mtime = self.env_path.stat().st_mtime
+        if mtime == self._env_mtime:
+            return
+        self._env_mtime = mtime
+        valores = dotenv_values(self.env_path, encoding=ENV_ENCODING)
+        if "ALLOWED_USER_IDS" in valores:
+            self.permitidos = parse_ids(valores["ALLOWED_USER_IDS"] or "")
+        if "MANAGER_CHAT_ID" in valores:
+            self.gerente_chat = valores["MANAGER_CHAT_ID"] or None
+        log.info(".env recarregado: %d usuário(s) com acesso; grupo do gerente: %s",
+                 len(self.permitidos), self.gerente_chat or "(não definido)")
 
 
 def ctx_de(context: ContextTypes.DEFAULT_TYPE) -> Contexto:
     return context.application.bot_data["ctx"]
 
 
+MSG_SEM_ACESSO = (
+    "Você ainda não tem acesso aos checklists.\n"
+    "Envie o número abaixo ao responsável para liberar o seu acesso:\n\n"
+    "Seu ID de usuário: {uid}"
+)
+
+
 def somente_autorizados(fn):
+    """Só quem está em ALLOWED_USER_IDS usa os comandos. Quem não está recebe o próprio ID."""
     @wraps(fn)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ctx = ctx_de(context)
-        if ctx.permitidos and update.effective_user.id not in ctx.permitidos:
+        ctx.recarregar_env()
+        uid = update.effective_user.id
+        if uid not in ctx.permitidos:
             if update.callback_query:
-                await update.callback_query.answer("Sem permissão.", show_alert=True)
+                await update.callback_query.answer("Sem acesso.", show_alert=True)
             else:
-                await update.effective_message.reply_text(
-                    "Você não tem permissão para usar este bot.")
+                await update.effective_message.reply_text(MSG_SEM_ACESSO.format(uid=uid))
             return
         return await fn(update, context)
     return wrapper
 
 
 # ------------------------------------------------------------------- sessão
-def get_sessao(context: ContextTypes.DEFAULT_TYPE) -> Sessao | None:
+def salvar(context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist) -> None:
+    """Guarda a sessão no chat (sobrevive a reinício) e no arquivo (visível em /hoje).
+
+    Também guarda uma CÓPIA do checklist: editar o YAML no meio de um checklist em andamento
+    não muda as etapas daquele checklist.
+    """
+    context.chat_data["sessao"] = s.to_dict()
+    context.chat_data["checklist"] = cl.to_dict()
+    ctx_de(context).arquivo.salvar_resultado(cl, s)
+
+
+def limpar_sessao(context: ContextTypes.DEFAULT_TYPE) -> None:
+    context.chat_data.pop("sessao", None)
+    context.chat_data.pop("checklist", None)
+
+
+def carregar_sessao(context: ContextTypes.DEFAULT_TYPE) -> tuple[Sessao, Checklist] | None:
     raw = context.chat_data.get("sessao")
-    return Sessao.from_dict(raw) if raw else None
-
-
-def save_sessao(context: ContextTypes.DEFAULT_TYPE, s: Sessao | None) -> None:
-    if s is None:
-        context.chat_data.pop("sessao", None)
-    else:
-        context.chat_data["sessao"] = s.to_dict()
-
-
-def checklist_da_sessao(ctx: Contexto, s: Sessao) -> Checklist:
-    return ctx.loja.checklist(s.tipo).para_data(date.fromisoformat(s.data))
+    if not raw:
+        return None
+    s = Sessao.from_dict(raw)
+    snap = context.chat_data.get("checklist")
+    if snap:
+        cl = Checklist.from_dict(snap)
+    else:  # estado antigo, sem cópia
+        cl = ctx_de(context).loja.checklist(s.tipo).para_data(date.fromisoformat(s.data))
+    return s, cl
 
 
 # ------------------------------------------------------------------- textos
@@ -136,9 +197,8 @@ def texto_etapa(cl: Checklist, s: Sessao) -> str:
 
 
 def teclado_status(cl: Checklist, idx: int) -> InlineKeyboardMarkup:
-    linha1 = [InlineKeyboardButton("✅ Concluído", callback_data=f"st:{idx}:c"),
-              InlineKeyboardButton("⚠️ Problema", callback_data=f"st:{idx}:p")]
-    linhas = [linha1]
+    linhas = [[InlineKeyboardButton("✅ Concluído", callback_data=f"st:{idx}:c"),
+               InlineKeyboardButton("⚠️ Problema", callback_data=f"st:{idx}:p")]]
     if cl.etapas[idx].nao_se_aplica:
         linhas.append([InlineKeyboardButton("➖ Não se aplica", callback_data=f"st:{idx}:n")])
     return InlineKeyboardMarkup(linhas)
@@ -167,7 +227,7 @@ async def seguir(msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checkli
     if fase == "fim":
         await finalizar(msg, context, s, cl)
         return
-    save_sessao(context, s)
+    salvar(context, s, cl)
     i = s.etapa_atual
     if fase == "status":
         await msg.reply_html(texto_etapa(cl, s), reply_markup=teclado_status(cl, i))
@@ -189,14 +249,25 @@ async def seguir(msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checkli
 
 async def iniciar(update: Update, context: ContextTypes.DEFAULT_TYPE, tipo: str) -> None:
     ctx, msg = ctx_de(context), update.effective_message
-    if get_sessao(context):
-        await msg.reply_text("Já existe um checklist em andamento. Use /status, /finalizar ou /cancelar.")
+    if update.effective_chat.type != ChatType.PRIVATE:
+        await msg.reply_text(
+            "Para fazer o checklist, abra uma conversa privada comigo e envie o comando lá. "
+            "(Em grupo eu não recebo as fotos.)")
+        return
+    if carregar_sessao(context):
+        await msg.reply_text(
+            "Já existe um checklist em andamento. Use /status, /finalizar ou /cancelar.")
         return
     try:
         base = ctx.loja.checklist(tipo)
     except FileNotFoundError:
         disp = ", ".join(ctx.loja.tipos_disponiveis()) or "nenhum"
         await msg.reply_text(f"O checklist '{tipo}' ainda não está configurado. Disponíveis: {disp}.")
+        return
+    except ValueError as exc:
+        log.error("Checklist '%s' inválido: %s", tipo, exc)
+        await msg.reply_text(f"O checklist '{tipo}' está com erro de configuração. "
+                             "Avise o responsável pelo sistema.")
         return
     agora = ctx.loja.agora()
     cl = base.para_data(agora.date())
@@ -211,9 +282,15 @@ async def iniciar(update: Update, context: ContextTypes.DEFAULT_TYPE, tipo: str)
 
 
 @somente_autorizados
-async def cmd_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    comando = update.effective_message.text.split()[0].lstrip("/").split("@")[0].lower()
-    await iniciar(update, context, COMANDOS_INICIO[comando])
+async def cmd_dinamico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Qualquer /comando que não seja fixo: procura o checklist que usa esse comando."""
+    ctx, msg = ctx_de(context), update.effective_message
+    comando = msg.text.split()[0].lstrip("/").split("@")[0].lower()
+    tipo = ctx.loja.tipo_por_comando(comando)
+    if tipo is None:
+        await msg.reply_text("Não conheço esse comando. Use /start para ver os disponíveis.")
+        return
+    await iniciar(update, context, tipo)
 
 
 @somente_autorizados
@@ -226,9 +303,24 @@ async def cmd_iniciar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.effective_message.reply_text(
-        "Olá! Eu guio os checklists do restaurante.\n\n"
-        "/fechar - fechamento da loja\n/abrir - abertura da loja\n"
+    """Aberto a todos: é assim que cada pessoa descobre o ID para pedir acesso."""
+    ctx, msg = ctx_de(context), update.effective_message
+    ctx.recarregar_env()
+    uid = update.effective_user.id
+    if uid not in ctx.permitidos:
+        await msg.reply_text(
+            MSG_SEM_ACESSO.format(uid=uid) + f"\nID deste chat: {update.effective_chat.id}")
+        return
+    iniciar_cmds = []
+    for tipo in ctx.loja.tipos_disponiveis():
+        try:
+            c = ctx.loja.checklist(tipo)
+        except (ValueError, FileNotFoundError):
+            continue
+        iniciar_cmds.append(f"/{c.comando} - {c.nome}")
+    await msg.reply_text(
+        "Olá! Eu guio os checklists do restaurante. Use-me em conversa privada.\n\n"
+        + "\n".join(iniciar_cmds) + "\n"
         "/status - ver a etapa atual\n/finalizar - encerrar com o que já foi feito\n"
         "/cancelar - cancelar o checklist atual\n\n"
         "Acompanhamento e impressão:\n"
@@ -236,37 +328,39 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/dia <data> [tipo] - o mesmo para outro dia (ex.: /dia 05/11)\n"
         "/imprimir [data] [tipo] - lista vazia em PDF para imprimir\n"
         "/resultado [data] [tipo] - lista preenchida em PDF\n"
-        "/reenviar [data] [tipo] - reenvia o relatório ao gerente\n\n"
-        f"Seu ID de usuário: {update.effective_user.id}\n"
-        f"ID deste chat: {update.effective_chat.id}"
+        "/reenviar [data] [tipo] - reenvia o relatório ao grupo\n\n"
+        f"Seu ID de usuário: {uid}\nID deste chat: {update.effective_chat.id}"
     )
 
 
 @somente_autorizados
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    s, msg = get_sessao(context), update.effective_message
-    if not s:
-        await msg.reply_text("Nenhum checklist em andamento. Use /fechar ou /abrir.")
+    msg, par = update.effective_message, carregar_sessao(context)
+    if not par:
+        await msg.reply_text("Nenhum checklist em andamento. Use /start para ver os comandos.")
         return
-    await seguir(msg, context, s, checklist_da_sessao(ctx_de(context), s))
+    await seguir(msg, context, *par)
 
 
 @somente_autorizados
 async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if get_sessao(context):
-        save_sessao(context, None)
-        await update.effective_message.reply_text("Checklist cancelado. Use /fechar para recomeçar.")
-    else:
+    par = carregar_sessao(context)
+    if not par:
         await update.effective_message.reply_text("Nenhum checklist em andamento.")
+        return
+    ctx_de(context).arquivo.apagar_sessao(par[0])  # descarta também as fotos desse checklist
+    limpar_sessao(context)
+    await update.effective_message.reply_text(
+        "Checklist cancelado. Nada foi enviado ao grupo. Use /start para ver os comandos.")
 
 
 @somente_autorizados
 async def cmd_finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    s, msg = get_sessao(context), update.effective_message
-    if not s:
+    msg, par = update.effective_message, carregar_sessao(context)
+    if not par:
         await msg.reply_text("Nenhum checklist em andamento.")
         return
-    cl = checklist_da_sessao(ctx_de(context), s)
+    s, cl = par
     restantes = len(cl.etapas) - s.etapa_atual
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("Sim, finalizar", callback_data="fin:s"),
                                 InlineKeyboardButton("Não", callback_data="fin:n")]])
@@ -280,18 +374,18 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
     ctx, msg = ctx_de(context), q.message
     partes = q.data.split(":")
-    s = get_sessao(context)
-    if not s:
+    par = carregar_sessao(context)
+    if not par:
         await q.answer("Este checklist não está mais em andamento.", show_alert=True)
         await q.edit_message_reply_markup(None)
         return
-    cl = checklist_da_sessao(ctx, s)
+    s, cl = par
 
     if partes[0] == "fin":
         await q.answer()
         await q.edit_message_reply_markup(None)
         if partes[1] == "s":
-            await finalizar(msg, context, s, cl, antecipado=True)
+            await finalizar(msg, context, s, cl)
         return
 
     idx = int(partes[1])
@@ -319,12 +413,13 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @somente_autorizados
 async def foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Recebe a foto, guarda em disco (só para o PDF) e segue. A foto não é devolvida."""
     ctx, msg = ctx_de(context), update.effective_message
-    s = get_sessao(context)
-    if not s or s.encerrada:
-        await msg.reply_text("Nenhum checklist em andamento. Use /fechar ou /abrir.")
+    par = carregar_sessao(context)
+    if not par or par[0].encerrada:
+        await msg.reply_text("Nenhum checklist em andamento. Use /start para ver os comandos.")
         return
-    cl = checklist_da_sessao(ctx, s)
+    s, cl = par
     gid = msg.media_group_id
     continuacao = s.etapa_destino(gid) != s.etapa_atual
     if not continuacao and s.resposta_atual(cl) is None:
@@ -348,7 +443,7 @@ async def foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await msg.reply_text("✅ Etapa registrada!")
         await seguir(msg, context, s, cl)
         return
-    save_sessao(context, s)
+    salvar(context, s, cl)
     if idx != s.etapa_atual:  # sobra de álbum anexada à etapa anterior
         return
     if s.fotos_faltando(cl):
@@ -359,16 +454,16 @@ async def foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @somente_autorizados
 async def texto_solto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    msg, s = update.effective_message, get_sessao(context)
-    if not s:
+    msg, par = update.effective_message, carregar_sessao(context)
+    if not par:
         return
-    cl = checklist_da_sessao(ctx_de(context), s)
+    s, cl = par
     try:
         s.add_obs(cl, msg.text)
     except EstadoInvalido:
         await msg.reply_text("Escolha o status da etapa nos botões 👆")
         return
-    save_sessao(context, s)
+    salvar(context, s, cl)
     await msg.reply_text("📝 Observação anotada.")
 
 
@@ -378,32 +473,35 @@ def nome_pdf(s: Sessao) -> str:
 
 
 async def finalizar(
-    msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist, antecipado: bool = False
+    msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist
 ) -> None:
     ctx = ctx_de(context)
     s.finalizar(cl, ctx.loja.agora())
-    save_sessao(context, None)
+    limpar_sessao(context)
     ctx.arquivo.salvar_resultado(cl, s)
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
     await asyncio.to_thread(gerar_relatorio_pdf, ctx.loja, cl, s, ctx.arquivo.raiz, pdf)
     resumo = resumo_texto(ctx.loja, cl, s)
 
-    falhas = []
-    for canal in ctx.canais:
-        try:
-            await canal.enviar(resumo, pdf)
-        except Exception:
-            log.exception("Falha ao enviar pelo canal %s", canal.nome)
-            falhas.append(canal.nome)
-    if not ctx.canais:
-        log.warning("Nenhum canal de entrega configurado (MANAGER_CHAT_ID).")
+    enviado = False
+    if ctx.gerente_chat and ctx.canais:
+        enviado = True
+        for canal in ctx.canais:
+            try:
+                await canal.enviar(resumo, pdf)
+            except Exception:
+                log.exception("Falha ao enviar pelo canal %s", canal.nome)
+                enviado = False
+    else:
+        log.warning("MANAGER_CHAT_ID não definido: relatório não enviado.")
 
-    mesmo_chat = ctx.gerente_chat is not None and str(msg.chat_id) == str(ctx.gerente_chat)
-    if not mesmo_chat:
+    if enviado:
+        await msg.reply_text(
+            "🎉 Checklist concluído! O relatório (resumo e PDF) foi enviado ao grupo. Obrigado!")
+    else:  # não perder a informação: mostra o resumo aqui e avisa
         await msg.reply_text(f"🎉 Checklist concluído!\n\n{resumo}")
-    if falhas or not ctx.canais:
-        await msg.reply_text("⚠️ O relatório foi salvo, mas não consegui enviá-lo ao gerente. "
-                             "Avise o responsável; depois use /reenviar.")
+        await msg.reply_text("⚠️ O relatório foi salvo, mas não consegui enviá-lo ao grupo. "
+                             "Avise o responsável; depois ele pode usar /reenviar.")
     ctx.arquivo.limpar_antigos(ctx.loja.agora().date(), ctx.retencao_dias)
 
 
@@ -443,22 +541,25 @@ async def _responder_tipo_invalido(msg, ctx: Contexto, tipo: str | None) -> bool
 
 
 async def _mostrar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE, args: list[str]) -> None:
+    """Mostra o plano do dia e o que já foi feito (inclusive checklists em andamento
+    iniciados por qualquer pessoa, pois tudo é lido do arquivo)."""
     ctx, msg = ctx_de(context), update.effective_message
     d, tipo = _args(ctx, args)
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
-    atual = get_sessao(context)
     for t in ([tipo] if tipo else ctx.loja.tipos_disponiveis()):
-        cl = ctx.loja.checklist(t).para_data(d)
+        try:
+            cl = ctx.loja.checklist(t).para_data(d)
+        except ValueError:
+            await msg.reply_text(f"{t}: erro de configuração no checklist. Avise o responsável.")
+            continue
+        salvos = ctx.arquivo.resultados(d, t)
+        s = None
+        if salvos:
+            cl, s = salvos[-1]  # usa as etapas como estavam naquele dia
         if not cl.etapas:
             await msg.reply_text(f"{t}: sem etapas em {data_br(d)}.")
             continue
-        s = atual if atual and atual.tipo == t and atual.data == d.isoformat() else None
-        if s is None:
-            salvos = ctx.arquivo.resultados(d, t)
-            s = salvos[-1][1] if salvos else None
-            if salvos:
-                cl = salvos[-1][0]  # usa as etapas como estavam naquele dia
         await enviar_longo(msg, progresso_texto(cl, s))
 
 
@@ -498,7 +599,7 @@ async def cmd_imprimir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 def _ultimo_resultado(ctx: Contexto, d: date, tipo: str | None):
-    salvos = ctx.arquivo.resultados(d, tipo)
+    salvos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
     return salvos[-1] if salvos else None
 
 
@@ -511,7 +612,7 @@ async def cmd_resultado(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     res = _ultimo_resultado(ctx, d, tipo)
     if not res:
-        await msg.reply_text(f"Não há resultado de {tipo} em {data_br(d)} "
+        await msg.reply_text(f"Não há resultado finalizado de {tipo} em {data_br(d)} "
                              f"(os dados ficam guardados por {ctx.retencao_dias} dias).")
         return
     cl, s = res
@@ -529,18 +630,20 @@ async def cmd_reenviar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     res = _ultimo_resultado(ctx, d, tipo)
     if not res:
-        await msg.reply_text(f"Não há resultado de {tipo} em {data_br(d)}.")
+        await msg.reply_text(f"Não há resultado finalizado de {tipo} em {data_br(d)}.")
         return
     cl, s = res
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
     if not pdf.exists():
         await asyncio.to_thread(gerar_relatorio_pdf, ctx.loja, cl, s, ctx.arquivo.raiz, pdf)
-    if not ctx.canais:
-        await msg.reply_text("MANAGER_CHAT_ID não está configurado.")
+    try:
+        for canal in ctx.canais:
+            await canal.enviar(resumo_texto(ctx.loja, cl, s), pdf)
+    except Exception as exc:
+        log.exception("Falha no reenvio")
+        await msg.reply_text(f"⚠️ Não consegui reenviar: {exc}")
         return
-    for canal in ctx.canais:
-        await canal.enviar(resumo_texto(ctx.loja, cl, s), pdf)
-    await msg.reply_text("✅ Relatório reenviado.")
+    await msg.reply_text("✅ Relatório reenviado ao grupo.")
 
 
 # --------------------------------------------------------------------- main
@@ -557,10 +660,8 @@ def build_app(token: str, ctx: Contexto) -> Application:
     )
     app = Application.builder().token(token).persistence(persistence).build()
     app.bot_data["ctx"] = ctx
-    if ctx.gerente_chat:
-        ctx.canais.append(TelegramEntrega(app.bot, ctx.gerente_chat))
+    ctx.canais.append(TelegramEntrega(app.bot, ctx))
     app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler(list(COMANDOS_INICIO), cmd_inicio))
     for nome, fn in [("iniciar", cmd_iniciar), ("status", cmd_status), ("cancelar", cmd_cancelar),
                      ("finalizar", cmd_finalizar), ("hoje", cmd_hoje), ("dia", cmd_dia),
                      ("imprimir", cmd_imprimir), ("resultado", cmd_resultado),
@@ -569,12 +670,15 @@ def build_app(token: str, ctx: Contexto) -> Application:
     app.add_handler(CallbackQueryHandler(botao, pattern=r"^(st|ct|fin):"))
     app.add_handler(MessageHandler(filters.PHOTO, foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, texto_solto))
+    # por último: /fechar, /abrir e qualquer comando definido nos YAMLs
+    app.add_handler(MessageHandler(filters.COMMAND, cmd_dinamico))
     app.add_error_handler(erro)
     return app
 
 
 def main() -> None:
-    load_dotenv(BASE_DIR / ".env")
+    env = BASE_DIR / ".env"
+    load_dotenv(env, encoding=ENV_ENCODING)
     logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
     token = os.getenv("BOT_TOKEN")
     if not token:
@@ -583,9 +687,14 @@ def main() -> None:
     removidos = ctx.arquivo.limpar_antigos(ctx.loja.agora().date(), ctx.retencao_dias)
     if removidos:
         log.info("Arquivo: removidos dias antigos %s", removidos)
+    for tipo, erro_txt in ctx.loja.validar():
+        log.error("Checklist '%s' com erro: %s", tipo, erro_txt)
+    if not ctx.permitidos:
+        log.warning("ALLOWED_USER_IDS vazio: ninguém conseguirá usar o bot até cadastrar IDs.")
     if not ctx.gerente_chat:
         log.warning("MANAGER_CHAT_ID não definido: relatórios não serão enviados.")
-    log.info("Loja: %s | checklists: %s", ctx.loja.nome, ", ".join(ctx.loja.tipos_disponiveis()))
+    log.info("Loja: %s | checklists: %s | usuários liberados: %d", ctx.loja.nome,
+             ", ".join(ctx.loja.tipos_disponiveis()), len(ctx.permitidos))
     build_app(token, ctx).run_polling()
 
 

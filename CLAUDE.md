@@ -44,8 +44,9 @@ Regras de dependência: `fechamento/` **não importa Telegram**. `bot.py` só ad
   ao finalizar).
 - **Sessao**: estado de um checklist em andamento; serializa para dict (pickle do
   Telegram e `resultado.json`). Pasta: `AAAA-MM-DD/<tipo>_HHMM`.
-- Cada finalização grava `resultado.json` com um snapshot do checklist, para regenerar
-  PDFs/listas mesmo que o YAML mude depois.
+- `resultado.json` (snapshot do checklist + sessão) é gravado a **cada resposta**, não só ao
+  finalizar: assim `/hoje` mostra o andamento de qualquer chat e dá para regenerar PDFs/listas
+  mesmo que o YAML mude depois. `finalizado_em` vazio = em andamento. `/cancelar` apaga a pasta.
 
 ### Fluxo de uma etapa
 
@@ -57,6 +58,26 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 ## Decisões já tomadas (com o usuário)
 
 - Evoluir a base existente (não recomeçar).
+- **Acesso**: lista de IDs em `ALLOWED_USER_IDS` no `.env`, **vazia = ninguém usa** (negado por
+  padrão). Quem não está na lista recebe o próprio ID (`/start` é aberto) para enviar a quem
+  cuida do servidor (o colega do usuário), que o adiciona ao `.env`. O bot relê o `.env` quando o
+  arquivo muda (`Contexto.recarregar_env`), sem reiniciar; vale para `ALLOWED_USER_IDS` e
+  `MANAGER_CHAT_ID`.
+- **Uso em conversa privada**: funcionários usam o bot em chat privado (em grupo o Telegram não
+  entrega fotos/textos soltos ao bot). `iniciar()` recusa em grupo. O grupo só recebe relatórios.
+- **Fotos só no PDF**: o bot nunca devolve foto/álbum em conversa nem no grupo; só envia texto e
+  PDF (`TelegramEntrega` usa apenas `send_message` e `send_document`; há teste estrito disso).
+  O funcionário recebe só uma confirmação curta; o resumo vai ao grupo (se o envio falhar ou não
+  houver grupo, o resumo aparece para o funcionário, para não perder a informação).
+- **O grupo pode mudar**: `MANAGER_CHAT_ID` é lido na hora do envio (sem reiniciar); o usuário
+  pode trocar de grupo ou mandar para uma pessoa só.
+- **Mais passos e mais checklists**: um YAML por tipo em `lojas/<loja>/checklists/`; o nome do
+  arquivo é o tipo e `comando:` define o `/comando` (padrão: `fechamento`->`/fechar`,
+  `abertura`->`/abrir`, outros usam o nome do tipo). Comandos dinâmicos (`cmd_dinamico`), então
+  um novo YAML funciona sem reiniciar. A sessão guarda uma **cópia** do checklist: editar o YAML
+  no meio de um checklist em andamento não afeta ele.
+- **Servidor**: o bot vai rodar num notebook antigo do colega do usuário, deixado no restaurante.
+  (Ainda falta definir o sistema operacional e como iniciar o bot automaticamente.)
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
   o usuário vai editar depois, incluindo dias e atividades.
 - Resumo + PDF vão para **um grupo** do Telegram por enquanto (`MANAGER_CHAT_ID`); pode
@@ -101,7 +122,7 @@ pytest                   # testes
 - `BOT_TOKEN` é segredo; não logar nem colocar em exemplos.
 - Fotos do restaurante podem mostrar pessoas/dados; não usar fotos reais em testes,
   fixtures ou no repositório (os testes geram imagens sintéticas).
-- Restringir o uso por `ALLOWED_USER_IDS` em produção.
+- O acesso é negado por padrão: `ALLOWED_USER_IDS` vazio bloqueia todos.
 
 ## Git
 
@@ -110,9 +131,8 @@ pytest                   # testes
 
 ## Pendências em aberto
 
-- **Onde rodar o bot**: o PC do restaurante pode estar desligado na hora do fechamento
-  (desligar o computador é uma etapa do checklist). Recomendado servidor sempre ligado
-  (VPS barata, Raspberry Pi). Falta o usuário decidir.
+- **Servidor**: notebook antigo no restaurante (decidido). Falta saber o sistema operacional,
+  como iniciar o bot sozinho ao ligar/reiniciar, impedir suspensão e queda de energia/Wi-Fi.
 - Logo em `lojas/divino-fogao/logo.png` tem só ~300 px de largura (sai levemente
   serrilhada no PDF); trocar por uma versão maior quando houver.
 - Checklist de **abertura** e checklists por dia: o usuário vai fornecer.
