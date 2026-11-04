@@ -2,8 +2,7 @@
 *.bat text eol=crlf
 *.ps1 text eol=crlf
 
-# Arquivos internos: ficam FORA do pacote gerado com "git archive" (o ZIP que se entrega a um
-# parceiro ou cliente). Atenção: quem tem acesso ao repositório no GitHub continua vendo estes
-# arquivos e o histórico deles.
+# Fora do pacote gerado com "git archive" (arquivos internos)
+.gitattributes export-ignore
 docs/guia-venda.md export-ignore
 CLAUDE.md export-ignore
