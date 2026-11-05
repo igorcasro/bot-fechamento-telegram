@@ -110,9 +110,11 @@ repositórios:
 
 ```bash
 cd C:\
-git clone https://x-access-token:SEU_TOKEN@github.com/igorcasro/bot-fechamento-telegram.git bot-fechamento
+git clone -b producao https://x-access-token:SEU_TOKEN@github.com/igorcasro/bot-fechamento-telegram.git bot-fechamento
 ```
 
+   O notebook usa a branch **`producao`**, que só avança quando o desenvolvedor libera uma
+   versão testada (a `main` é onde o desenvolvimento acontece).
 4. **Nunca edite arquivos do código** em `C:\bot-fechamento` (só o `.env`). Assim o
    `servidor\atualizar.bat` (que usa `git pull --ff-only`) nunca encontra conflito.
 

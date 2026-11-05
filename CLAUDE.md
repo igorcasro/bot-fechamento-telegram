@@ -97,6 +97,10 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 - **Instalação no servidor sem fork**: o notebook clona o repositório original com token
   fine-grained **somente leitura** (ou deploy key) e atualiza com `git pull --ff-only`; o código lá
   nunca é editado e a configuração fica em `LOJAS_DIR`. Um fork só duplicaria a manutenção.
+- **Branch `producao`**: é a que o servidor clona (`git clone -b producao`). Não tem conteúdo
+  próprio: só avança por *fast-forward* a partir da `main` quando uma versão está pronta
+  (`git push origin main:producao`), então nunca há conflito de merge. A configuração do servidor
+  fica em `LOJAS_DIR`, fora do código.
 - Os testes usam `tests/fixtures/lojas/` (cópia fixa do checklist de 21 etapas), **não** o
   `lojas/` de produção: editar o YAML real não quebra a suíte. `test_lojas_reais_carregam_sem_erro`
   só garante que o YAML real carrega.
