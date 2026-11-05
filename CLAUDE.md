@@ -16,7 +16,7 @@ relatório vem de um PDF de fechamento repassado pelo dono do restaurante; o có
 
 ```
 bot.py                 # ÚNICO lugar que importa Telegram: comandos, botões, fotos, envio
-fechamento/
+nucleo/
   checklist.py         # Checklist/Etapa, seções e regras por dia (dias/datas/exceto)
   sessao.py            # Sessao: máquina de estados (status, fotos, obs, finalizar)
   relatorio.py         # resumo_texto() e progresso_texto()
@@ -28,12 +28,11 @@ fechamento/
 lojas/<id>/            # dados da loja: loja.yaml, logo.png, checklists/<tipo>.yaml
 servidor/              # scripts Windows: iniciar-bot.bat (laço de reinício), instalar/desinstalar
                        # (tarefa agendada + energia), atualizar.bat (git pull + reinício)
-docs/                  # guia-primeiro-teste.md, guia-servidor-windows.md e guia-venda.md
-                       # (guia-venda.md é INTERNO: ver a decisão sobre o Projeto 1 abaixo)
+docs/                  # guia-primeiro-teste.md e guia-servidor-windows.md
 tests/                 # pytest (lógica, PDFs e fluxo completo dos handlers)
 ```
 
-Regras de dependência: `fechamento/` **não importa Telegram**. `bot.py` só adapta.
+Regras de dependência: `nucleo/` **não importa Telegram**. `bot.py` só adapta.
 
 ### Modelo de dados
 
@@ -95,14 +94,11 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   **Esses scripts nunca foram executados em Windows** (desenvolvidos em Linux): ao receber relato
   de problema, trate-os como não verificados. Nunca use `timeout` em `.bat` de tarefa agendada
   (falha sem console); use `ping`.
-- Dado o httpx logar a URL com o **token** em nível INFO, `fechamento/logs.py` silencia
+- Dado o httpx logar a URL com o **token** em nível INFO, `nucleo/logs.py` silencia
   `httpx`/`httpcore`. Não reative esses logs.
-- Possível venda a terceiros: ver `docs/guia-venda.md` (no Projeto 1, verificar propriedade com o dono do restaurante, que também iniciou a automação (é a mesma pessoa),
-  marca do Divino Fogão fora do produto, LGPD, contrato). Nada disso foi decidido ainda.
-  **O responsável pelo Projeto 1 não deve ver o guia de venda**: entregar a ele só um ZIP gerado com
-  `git archive` (seção 12 do guia), que deixa de fora `docs/guia-venda.md`, `CLAUDE.md`,
-  `.claude/` e `graphify-out/` (ver `.gitattributes`), e **nunca** acesso ao repositório (o histórico
-  guarda o guia). Não referenciar o guia de venda em README, guias de servidor nem scripts.
+- O repositório é compartilhado com o responsável pelo Projeto 1. Documentos internos do
+  usuário ficam **fora** do repositório (não versionar), e não escrever neles nada que não deva
+  ser lido por quem recebe o acesso.
 - Lista inicial de etapas = a do PDF de referência (21 etapas: Cozinha e Atendimento);
   edição posterior, incluindo dias e atividades, quando um novo modelo de checklist for disponibilizado.
 - Resumo + PDF vão para **um grupo** do Telegram (`MANAGER_CHAT_ID`); pode
@@ -155,9 +151,8 @@ handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendên
 - Fotos do restaurante podem mostrar pessoas/dados; não usar fotos reais em testes,
   fixtures ou no repositório (os testes geram imagens sintéticas).
 - O acesso é negado por padrão: `ALLOWED_USER_IDS` vazio bloqueia todos.
-- `graphify-out/cache/` fica fora do Git (`.gitignore`): guarda caminhos do computador do usuário
-  e o nome de `docs/guia-venda.md`. O `graphify` o recria sozinho. `graphify-out/` inteiro fica
-  fora do pacote de entrega (`.gitattributes`).
+- `graphify-out/cache/` fica fora do Git (`.gitignore`): guarda caminhos do computador do usuário.
+  O `graphify` o recria sozinho.
 
 ## Git
 
@@ -177,8 +172,8 @@ handlers simulados; **não** valida `servidor/` nem o Telegram real (ver Pendên
 - Bot real no Telegram: **testado pelo usuário em 04/11/2026** (`/fechar`, `/imprimir`, `/resultado`
   e o menu "/" funcionaram bem). Os testes automatizados usam objetos simulados; corrigir o que o
   uso real revelar. Os scripts de `servidor/` ainda dependem do notebook do restaurante (abaixo).
-- Decidir como entregar ao Projeto 1 (ZIP com a configuração fora da pasta do código; ver a
-  seção 12 do guia de venda).
+- Instalar no Projeto 1 pelo repositório compartilhado, com a configuração fora da pasta do
+  código (`LOJAS_DIR`), seguindo `docs/guia-servidor-windows.md`.
 
 ## graphify
 
