@@ -94,6 +94,12 @@ etapa que acabou de fechar (não "vazam" para a próxima).
   **Esses scripts nunca foram executados em Windows** (desenvolvidos em Linux): ao receber relato
   de problema, trate-os como não verificados. Nunca use `timeout` em `.bat` de tarefa agendada
   (falha sem console); use `ping`.
+- **Instalação no servidor sem fork**: o notebook clona o repositório original com token
+  fine-grained **somente leitura** (ou deploy key) e atualiza com `git pull --ff-only`; o código lá
+  nunca é editado e a configuração fica em `LOJAS_DIR`. Um fork só duplicaria a manutenção.
+- Os testes usam `tests/fixtures/lojas/` (cópia fixa do checklist de 21 etapas), **não** o
+  `lojas/` de produção: editar o YAML real não quebra a suíte. `test_lojas_reais_carregam_sem_erro`
+  só garante que o YAML real carrega.
 - Dado o httpx logar a URL com o **token** em nível INFO, `nucleo/logs.py` silencia
   `httpx`/`httpcore`. Não reative esses logs.
 - O repositório é compartilhado com o responsável pelo Projeto 1. Documentos internos do

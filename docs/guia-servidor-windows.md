@@ -24,7 +24,7 @@ Tempo estimado: 40 a 60 minutos, com o notebook conectado à internet.
 | **Token do bot** | Conversa com o `@BotFather` no Telegram (`/newbot`). É como uma senha: não compartilhe. |
 | **Seu ID e o ID de cada funcionário** | Cada pessoa envia `/start` ao bot em conversa privada; ele responde "Seu ID de usuário: …". |
 | **ID do grupo que recebe os relatórios** | Crie o grupo, adicione o bot e envie `/start` lá: ele responde "ID deste chat: -100…". |
-| **Acesso ao repositório no GitHub** | O repositório `igorcasro/bot-fechamento-telegram` é **privado**: você precisa ser convidado. |
+| **Acesso ao repositório no GitHub** | O repositório `igorcasro/bot-fechamento-telegram` é **privado**. Quem é dono gera um token **somente leitura** para o notebook (passo 3). |
 | **Conta de administrador no Windows** | Para instalar programas e rodar os scripts. |
 
 > Os passos para criar o bot e descobrir os IDs estão em
@@ -92,20 +92,34 @@ marcando a opção do PATH.
 
 A pasta **precisa ser curta e sem espaços** (por isso `C:\bot-fechamento`).
 
-### Opção A (recomendada): Git — facilita as atualizações
+### Fork ou clone? Use o clone direto (sem fork)
 
-1. Instale o **Git para Windows**: **git-scm.com** (pode aceitar todas as opções padrão).
-2. No Prompt de Comando:
+O notebook só precisa **baixar** o código e, de vez em quando, **atualizar**. Um *fork* serve
+para quem quer propor mudanças ao projeto de outra pessoa; aqui ele só criaria uma segunda cópia
+para manter sincronizada. O mais simples e seguro é **clonar o repositório original** com uma
+credencial **somente leitura**, assim o notebook nunca consegue alterar o código nem ver outros
+repositórios:
+
+1. No GitHub (conta dona do repositório): **Settings → Developer settings → Personal access
+   tokens → Fine-grained tokens → Generate new token**. Escolha **Only select repositories** →
+   `bot-fechamento-telegram`, permissão **Contents: Read-only** e prazo de validade longo.
+   (Alternativa: **Deploy key** em *Settings → Deploy keys* do repositório, sem marcar
+   *Allow write access*.)
+2. Instale o **Git para Windows** (**git-scm.com**, opções padrão).
+3. No Prompt de Comando, troque `SEU_TOKEN` pelo token gerado:
 
 ```bash
 cd C:\
-git clone https://github.com/igorcasro/bot-fechamento-telegram.git bot-fechamento
+git clone https://x-access-token:SEU_TOKEN@github.com/igorcasro/bot-fechamento-telegram.git bot-fechamento
 ```
 
-Como o repositório é privado, vai abrir uma janela para você **entrar no GitHub**. Use a conta
-que recebeu o convite.
+4. **Nunca edite arquivos do código** em `C:\bot-fechamento` (só o `.env`). Assim o
+   `servidor\atualizar.bat` (que usa `git pull --ff-only`) nunca encontra conflito.
 
-### Opção B: ZIP
+> O token fica gravado em `C:\bot-fechamento\.git\config`. Como só lê esse único repositório,
+> o risco é pequeno; se o notebook for perdido, revogue o token no GitHub.
+
+### Alternativa sem Git: ZIP
 
 1. No GitHub, abra o repositório → **Code → Download ZIP**.
 2. Extraia em `C:\bot-fechamento`. **Confira:** o arquivo `bot.py` precisa estar direto dentro
@@ -149,10 +163,10 @@ MANAGER_CHAT_ID=-1001234567890
 Salve com **Ctrl+S**. (Se o Bloco de Notas não deixar salvar, feche e abra de novo com
 **botão direito → Executar como administrador**.)
 
-### Recomendado: separar a configuração do código
+### Obrigatório com Git: separar a configuração do código
 
-Os checklists e a logo ficam na pasta `lojas\`, dentro do projeto. Se você atualizar o bot
-(ZIP ou `git pull`), essa pasta pode ser sobrescrita e **você perde as edições dos checklists**.
+Os checklists e a logo ficam na pasta `lojas\`, dentro do projeto. Se você editar essa pasta no
+notebook, o `git pull` pode falhar por conflito (ou, com ZIP, sobrescrever suas edições).
 Para evitar, guarde a configuração **fora** da pasta do código:
 
 ```bash

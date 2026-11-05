@@ -35,4 +35,4 @@ def cl() -> Checklist:
 @pytest.fixture
 def loja():
     from nucleo.loja import Loja
-    return Loja.carregar(RAIZ / "lojas", "divino-fogao")
+    return Loja.carregar(RAIZ / "tests" / "fixtures" / "lojas", "divino-fogao")

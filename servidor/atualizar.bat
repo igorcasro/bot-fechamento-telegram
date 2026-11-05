@@ -4,7 +4,7 @@ rem projeto clonado com "git clone". Rode como ADMINISTRADOR (clique direito > E
 rem Seus arquivos .env, arquivo\, logs\ e estado.pickle NAO sao tocados (estao fora do Git).
 
 cd /d "%~dp0.."
-git pull
+git pull --ff-only
 if errorlevel 1 (
     echo.
     echo FALHA no "git pull". Nada foi reiniciado. Leia a mensagem acima.

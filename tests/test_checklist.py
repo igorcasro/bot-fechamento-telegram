@@ -5,7 +5,7 @@ import pytest
 from nucleo.checklist import Checklist, Etapa
 
 
-def test_checklist_real_segue_o_pdf(loja):
+def test_checklist_de_referencia_segue_o_pdf(loja):
     c = loja.checklist("fechamento")
     assert len(c.etapas) == 21
     assert [n for n, _ in c.secoes()] == ["COZINHA", "ATENDIMENTO"]
@@ -127,3 +127,13 @@ def test_loja_tipo_por_comando_e_validar(loja, tmp_path):
     assert nova.tipo_por_comando("abrir") == "abertura"
     assert nova.tipo_por_comando("nada") is None
     assert [t for t, _ in nova.validar()] == ["quebrado"]
+
+
+def test_lojas_reais_carregam_sem_erro():
+    """Rede de segurança para edições dos YAMLs de produção (lojas/): carregam e têm etapas.
+    Os demais testes usam tests/fixtures, para não quebrar quando o checklist real muda."""
+    from conftest import RAIZ
+    from nucleo.loja import Loja
+    loja = Loja.carregar(RAIZ / "lojas", "divino-fogao")
+    for tipo in loja.tipos_disponiveis():
+        assert loja.checklist(tipo).etapas, tipo
