@@ -20,11 +20,25 @@ comando: fechar    # comando do Telegram que inicia este checklist (/fechar)
 nome: "Fechamento da Loja"
 
 secoes:
+  - nome: ATENDIMENTO
+    etapas:
+      - titulo: "TV desligada"
+      - titulo: "Refresqueira limpa e desligada"
+      - titulo: "Computador desligado"
+      - titulo: "Balança desligada"
+      - titulo: "Buffet desligado"
+      - titulo: "Chão do atendimento limpo"
+      - titulo: "Ar-condicionado desligado"
+      - titulo: "Pista de salada limpa"
+      - titulo: "Pista de sobremesa limpa"
+
   - nome: COZINHA
     etapas:
       - titulo: "Limpeza das caixas de gordura"
+        fotos: 4
       - titulo: "Geladeira ligada"
-      - titulo: "Coifa desligada e aberta"
+        fotos: 4
+      - titulo: "Estufa desligada e aberta"
         foto: opcional
       - titulo: "Queijo ralado"
       - titulo: "Batata picada"
@@ -39,12 +53,4 @@ secoes:
       - titulo: "Louça toda lavada e guardada"
         foto: opcional
 
-  - nome: ATENDIMENTO
-    etapas:
-      - titulo: "TV desligada"
-      - titulo: "Refresqueira limpa e desligada"
-      - titulo: "Computador desligado"
-      - titulo: "Balança desligada"
-      - titulo: "Buffet desligado"
-      - titulo: "Chão do atendimento limpo"
-      - titulo: "Ar-condicionado desligado"
+  
