@@ -1,6 +1,6 @@
 import logging
 
-from fechamento import logs
+from nucleo import logs
 
 
 def test_log_em_arquivo_e_token_nao_vaza(tmp_path):

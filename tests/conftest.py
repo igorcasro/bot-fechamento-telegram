@@ -8,7 +8,7 @@ import pytest
 RAIZ = Path(__file__).parent.parent
 sys.path.insert(0, str(RAIZ))
 
-from fechamento.checklist import Checklist, Etapa  # noqa: E402
+from nucleo.checklist import Checklist, Etapa  # noqa: E402
 
 TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -34,5 +34,5 @@ def cl() -> Checklist:
 
 @pytest.fixture
 def loja():
-    from fechamento.loja import Loja
+    from nucleo.loja import Loja
     return Loja.carregar(RAIZ / "lojas", "divino-fogao")

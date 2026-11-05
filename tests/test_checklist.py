@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from fechamento.checklist import Checklist, Etapa
+from nucleo.checklist import Checklist, Etapa
 
 
 def test_checklist_real_segue_o_pdf(loja):
@@ -117,7 +117,7 @@ def test_tipo_deve_ser_igual_ao_arquivo_e_comando_valido(tmp_path):
 
 def test_loja_tipo_por_comando_e_validar(loja, tmp_path):
     import shutil
-    from fechamento.loja import Loja
+    from nucleo.loja import Loja
     shutil.copytree(loja.pasta, tmp_path / "x")
     (tmp_path / "x" / "checklists" / "quebrado.yaml").write_text("secoes: []\n", encoding="utf-8")
     (tmp_path / "x" / "checklists" / "abertura.yaml").write_text(

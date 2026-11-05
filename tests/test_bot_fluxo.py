@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock
 from PIL import Image
 
 import bot
-from fechamento.arquivo import Arquivo
-from fechamento.loja import Loja
+from nucleo.arquivo import Arquivo
+from nucleo.loja import Loja
 
 FECHAMENTO = "fechamento"
 

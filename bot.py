@@ -26,14 +26,14 @@ from telegram.ext import (
     PersistenceInput, PicklePersistence, filters,
 )
 
-from fechamento.arquivo import Arquivo
-from fechamento.checklist import FOTO_NENHUMA, FOTO_OBRIGATORIA, Checklist
-from fechamento.entrega import CanalEntrega
-from fechamento import logs
-from fechamento.loja import Loja
-from fechamento.pdf import gerar_lista_pdf, gerar_relatorio_pdf
-from fechamento.relatorio import ICONE, ROTULO, data_br, progresso_texto, resumo_texto
-from fechamento.sessao import EstadoInvalido, Sessao, Status
+from nucleo.arquivo import Arquivo
+from nucleo.checklist import FOTO_NENHUMA, FOTO_OBRIGATORIA, Checklist
+from nucleo.entrega import CanalEntrega
+from nucleo import logs
+from nucleo.loja import Loja
+from nucleo.pdf import gerar_lista_pdf, gerar_relatorio_pdf
+from nucleo.relatorio import ICONE, ROTULO, data_br, progresso_texto, resumo_texto
+from nucleo.sessao import EstadoInvalido, Sessao, Status
 
 BASE_DIR = Path(__file__).parent
 ENV_ENCODING = "utf-8-sig"  # tolera arquivo salvo com BOM pelo Bloco de Notas

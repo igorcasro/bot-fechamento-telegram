@@ -3,8 +3,8 @@ from pathlib import Path
 from PIL import Image
 
 from conftest import hora
-from fechamento.pdf import gerar_lista_pdf, gerar_relatorio_pdf
-from fechamento.sessao import Sessao, Status
+from nucleo.pdf import gerar_lista_pdf, gerar_relatorio_pdf
+from nucleo.sessao import Sessao, Status
 
 
 def cenario(cl, base: Path):
@@ -49,7 +49,7 @@ def test_lista_preenchida_destaca_etapas_nao_realizadas(loja, cl, tmp_path, monk
 def test_fotos_ocupam_cerca_de_um_quarto_da_pagina():
     """Foto em pé (3:4) fica grande: ~8 cm de largura x ~11 cm de altura, como pedido."""
     from reportlab.lib.units import cm
-    from fechamento.pdf import _distribuir
+    from nucleo.pdf import _distribuir
     linhas, total = _distribuir([3 / 4], 12 * cm)
     (_, larg, alt), = linhas[0]
     assert 7.5 * cm < larg < 9 * cm and 10 * cm < alt < 12.1 * cm

@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import hora
-from fechamento.sessao import EstadoInvalido, Sessao, Status
+from nucleo.sessao import EstadoInvalido, Sessao, Status
 
 
 def nova(cl):

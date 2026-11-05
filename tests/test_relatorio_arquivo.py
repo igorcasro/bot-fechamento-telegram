@@ -1,9 +1,9 @@
 from datetime import date, timedelta
 
 from conftest import hora
-from fechamento.arquivo import Arquivo
-from fechamento.relatorio import progresso_texto, resumo_texto
-from fechamento.sessao import Sessao, Status
+from nucleo.arquivo import Arquivo
+from nucleo.relatorio import progresso_texto, resumo_texto
+from nucleo.sessao import Sessao, Status
 
 
 def sessao_pronta(cl):

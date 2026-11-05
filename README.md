@@ -148,7 +148,7 @@ Fotos, `resultado.json` e PDFs ficam em `arquivo/<loja>/AAAA-MM-DD/<tipo>_HHMM/`
 
 ```
 bot.py                  # adaptador do Telegram (comandos, botões, fotos, envio)
-fechamento/
+nucleo/
   checklist.py          # seções, etapas e regras por dia (YAML)
   sessao.py             # máquina de estados de um checklist em andamento
   relatorio.py          # resumo em texto e progresso do dia
