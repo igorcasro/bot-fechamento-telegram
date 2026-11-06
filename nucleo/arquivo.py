@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
-from datetime import date, timedelta
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from PIL import Image, ImageOps
 
@@ -12,10 +15,23 @@ from .checklist import Checklist
 from .sessao import Sessao
 
 MAX_LADO_FOTO = 1280
+log = logging.getLogger(__name__)
+
+
+@contextmanager
+def destino_atomico(destino: Path):
+    """Publica o arquivo completo por substituição no mesmo diretório."""
+    with NamedTemporaryFile(dir=destino.parent, suffix=".tmp", delete=False) as arquivo:
+        temporario = Path(arquivo.name)
+    try:
+        yield temporario
+        temporario.replace(destino)
+    finally:
+        temporario.unlink(missing_ok=True)
 
 
 class Arquivo:
-    """Raiz = <ARCHIVE_DIR>/<id da loja>. Estrutura: AAAA-MM-DD/<tipo>_HHMM/..."""
+    """Raiz = <ARCHIVE_DIR>/<id da loja>. Sessões novas têm um UUID após HHMM."""
 
     def __init__(self, raiz: str | Path):
         self.raiz = Path(raiz)
@@ -41,11 +57,12 @@ class Arquivo:
 
     def salvar_resultado(self, cl: Checklist, s: Sessao) -> Path:
         arq = self.pasta(s) / "resultado.json"
-        arq.write_text(
-            json.dumps({"checklist": cl.to_dict(), "sessao": s.to_dict()},
-                       ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        with destino_atomico(arq) as temporario:
+            temporario.write_text(
+                json.dumps({"checklist": cl.to_dict(), "sessao": s.to_dict()},
+                           ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         return arq
 
     def resultados(
@@ -60,8 +77,19 @@ class Arquivo:
         if not base.is_dir():
             return out
         for arq in sorted(base.glob("*/resultado.json")):
-            raw = json.loads(arq.read_text(encoding="utf-8"))
-            cl, s = Checklist.from_dict(raw["checklist"]), Sessao.from_dict(raw["sessao"])
+            try:
+                raw = json.loads(arq.read_text(encoding="utf-8"))
+                cl, s = Checklist.from_dict(raw["checklist"]), Sessao.from_dict(raw["sessao"])
+                datetime.fromisoformat(s.iniciado_em)
+                if s.finalizado_em is not None:
+                    datetime.fromisoformat(s.finalizado_em)
+                for resposta in s.respostas.values():
+                    datetime.fromisoformat(resposta.hora)
+                    for foto in resposta.fotos:
+                        datetime.fromisoformat(foto.hora)
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+                log.warning("Resultado ignorado em %s: %s", arq, exc)
+                continue
             if (tipo is None or s.tipo == tipo) and (not apenas_finalizados or s.encerrada):
                 out.append((cl, s))
         return sorted(out, key=lambda x: x[1].iniciado_em)

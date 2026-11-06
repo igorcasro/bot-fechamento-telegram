@@ -139,4 +139,7 @@ def test_serializacao_ida_e_volta(cl):
 
 
 def test_pasta_da_sessao(cl):
-    assert nova(cl).pasta == "2026-11-03/fechamento_2238"
+    s = nova(cl)
+    assert s.pasta.startswith("2026-11-03/fechamento_2238_")
+    assert s.pasta != nova(cl).pasta
+    assert Sessao.from_dict(s.to_dict()).chave == s.chave

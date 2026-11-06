@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
-from .checklist import Checklist
+from .checklist import COMANDOS_PADRAO, Checklist
 
 
 @dataclass
@@ -44,10 +44,8 @@ class Loja:
             try:
                 if self.checklist(tipo).comando == comando:
                     return tipo
-            except ValueError:
-                # YAML com erro: se o comando padrão (nome do arquivo) bate, devolve o tipo para
-                # o bot poder avisar "erro de configuração" em vez de "comando desconhecido".
-                if tipo == comando:
+            except (ValueError, FileNotFoundError):
+                if comando in (tipo, COMANDOS_PADRAO.get(tipo)):
                     return tipo
         return None
 

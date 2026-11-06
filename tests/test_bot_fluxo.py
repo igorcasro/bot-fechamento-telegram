@@ -97,7 +97,9 @@ class Chat:
         self.run(HANDLERS.get(nome, bot.cmd_dinamico)(self._update(msg), self.context))
         return msg
 
-    def clicar(self, data):
+    def clicar(self, data, *, literal=False):
+        if not literal and self.sessao:
+            data = f"{data}:{self.sessao.chave}"
         msg = novo_msg()
         q = SimpleNamespace(data=data, message=msg, answer=AsyncMock(),
                             edit_message_text=AsyncMock(), edit_message_reply_markup=AsyncMock())
@@ -358,6 +360,82 @@ def test_dois_fechamentos_no_mesmo_dia_ficam_acessiveis(loja, tmp_path, monkeypa
     assert len(chat.canal.enviados) == 3
     msg = chat.comando("resultado", "10:00")
     assert "iniciado às 10:00" in msg.reply_text.await_args.args[0]
+
+
+def test_mesmo_minuto_tem_pastas_e_referencias_distintas(loja, tmp_path, monkeypatch):
+    agora = loja.agora().replace(hour=18, minute=30)
+    monkeypatch.setattr(Loja, "agora", lambda self: agora)
+    ctx = novo_ctx(loja, tmp_path)
+    chats = [Chat(ctx, chat_id=i) for i in (1, 2)]
+    for i, chat in enumerate(chats, 1):
+        chat.user.full_name = f"Pessoa {i}"
+        chat.comando("fechar")
+    assert chats[0].sessao.pasta != chats[1].sessao.pasta
+    for chat in chats:
+        chat.comando("finalizar")
+        chat.clicar("fin:s")
+    assert len(ctx.arquivo.resultados(agora.date(), FECHAMENTO, True)) == 2
+    chat = chats[0]
+    assert "mais de um" in chat.comando("resultado", "18:30").reply_text.await_args.args[0]
+    progresso = chat.comando("hoje").reply_text.await_args_list
+    assert sum("18:30#" in chamada.args[0] for chamada in progresso) == 2
+    for _, s in ctx.arquivo.resultados(agora.date(), FECHAMENTO, True):
+        ref = f"18:30#{s.chave}"
+        chat.comando("resultado", ref).reply_document.assert_awaited_once()
+        chat.comando("reenviar", ref)
+        assert s.responsavel in chat.canal.enviados[-1][0]
+
+
+def test_botoes_de_sessao_anterior_sao_rejeitados(loja, tmp_path):
+    chat = Chat(novo_ctx(loja, tmp_path))
+    inicio = chat.comando("fechar")
+    teclado = inicio.reply_html.await_args.kwargs["reply_markup"]
+    status_antigo = teclado.inline_keyboard[0][0].callback_data
+    confirmacao = chat.comando("finalizar").reply_text.await_args.kwargs["reply_markup"]
+    finalizar_antigo = confirmacao.inline_keyboard[0][0].callback_data
+    chat.comando("cancelar")
+    chat.comando("fechar")
+    for data in (status_antigo, finalizar_antigo, "st:0:c", "fin:s"):
+        _, q = chat.clicar(data, literal=True)
+        assert q.answer.await_args.kwargs["show_alert"]
+        assert chat.sessao.respostas == {}
+
+
+def test_pdf_incompleto_e_regenerado_no_reenvio(loja, tmp_path, monkeypatch):
+    chat = Chat(novo_ctx(loja, tmp_path))
+    chat.comando("fechar")
+    destino = chat.ctx.arquivo.pasta(chat.sessao) / bot.nome_pdf(chat.sessao)
+
+    def falhar(loja, cl, s, raiz, caminho):
+        caminho.write_bytes(b"incompleto")
+        raise RuntimeError("falha ao montar PDF")
+
+    with monkeypatch.context() as m:
+        m.setattr(bot, "gerar_relatorio_pdf", falhar)
+        chat.comando("finalizar")
+        msg, _ = chat.clicar("fin:s")
+    assert "Checklist salvo" in msg.reply_text.await_args.args[0]
+    assert chat.sessao is None and not destino.exists()
+    chat.comando("reenviar")
+    assert destino.read_bytes().startswith(b"%PDF")
+    assert len(chat.canal.enviados) == 1
+    destino.write_bytes(b"%PDF-1.4\ntruncado")
+    chat.comando("reenviar")
+    assert destino.read_bytes().rstrip().endswith(b"%%EOF")
+    assert len(chat.canal.enviados) == 2
+
+
+def test_historico_funciona_com_yaml_invalido(loja, tmp_path):
+    loja = copia_loja(loja, tmp_path)
+    chat = Chat(novo_ctx(loja, tmp_path))
+    chat.comando("fechar")
+    chat.comando("finalizar")
+    chat.clicar("fin:s")
+    (loja.pasta / "checklists" / "fechamento.yaml").write_text("secoes: [", encoding="utf-8")
+    assert "erro de configuração" in chat.comando("fechar").reply_text.await_args.args[0]
+    assert "erro de configuração" in chat.comando("imprimir").reply_text.await_args.args[0]
+    assert "finalizado" in chat.comando("hoje", "fechamento").reply_text.await_args.args[0]
+    chat.comando("resultado").reply_document.assert_awaited_once()
 
 
 def test_cancelar_descarta_checklist_e_fotos(loja, tmp_path):

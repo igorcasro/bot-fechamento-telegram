@@ -45,7 +45,7 @@ Regras de dependência: `nucleo/` **não importa Telegram**. `bot.py` só adapta
 - **Status**: `concluido`, `problema`, `nao_se_aplica`, `nao_realizado` (etapa sem resposta
   ao finalizar).
 - **Sessao**: estado de um checklist em andamento; serializa para dict (pickle do
-  Telegram e `resultado.json`). Pasta: `AAAA-MM-DD/<tipo>_HHMM`.
+  Telegram e `resultado.json`). Pasta nova: `AAAA-MM-DD/<tipo>_HHMM_<uuid>`.
 - `resultado.json` (snapshot do checklist + sessão) é gravado a **cada resposta**, não só ao
   finalizar: assim `/hoje` mostra o andamento de qualquer chat e dá para regenerar PDFs/listas
   mesmo que o YAML mude depois. `finalizado_em` vazio = em andamento. `/cancelar` apaga a pasta.
@@ -120,9 +120,10 @@ etapa que acabou de fechar (não "vazam" para a próxima).
 - Logo do Projeto 1 (`lojas/divino-fogao/logo.png`): versão fornecida pelo responsável (492×145 px).
 - Acompanhamento por dia: comandos do bot (`/hoje`, `/dia`). Página web é opcional e só
   se for de fácil implementação posterior (os dados já estão em `resultado.json`).
-- Vários checklists do mesmo tipo no mesmo dia: cada um tem a própria pasta (`<tipo>_HHMM`) e
-  nada é sobrescrito. `/hoje` e `/dia` mostram todos; `/resultado` e `/reenviar` usam o mais
-  recente, avisam os outros e aceitam `HH:MM` (hora de início) para escolher.
+- Cada checklist tem pasta própria, inclusive quando começam no mesmo minuto. `/hoje` e
+  `/dia` mostram as execuções. `/resultado` e `/reenviar` usam a mais recente sem hora
+  explícita. Para distinguir sessões com o mesmo `HH:MM`, copie a referência completa em
+  `/dia`. Pastas antigas no formato `<tipo>_HHMM` continuam legíveis.
 - Impressão: PDFs `/imprimir` (lista vazia) e `/resultado` (lista preenchida), com seções
   separadas e caixas de marcação.
 

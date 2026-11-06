@@ -1,4 +1,7 @@
 from datetime import date, timedelta
+from pathlib import Path
+
+import pytest
 
 from conftest import hora
 from nucleo.arquivo import Arquivo
@@ -51,6 +54,35 @@ def test_resultados_ida_e_volta(cl, tmp_path):
     assert len(achados) == 1 and achados[0][1].to_dict() == s.to_dict()
     assert arq.resultados(date(2026, 11, 3), "abertura") == []
     assert arq.resultados(date(2026, 11, 4)) == []
+
+
+def test_resultados_ignora_arquivo_corrompido_e_le_pasta_antiga(cl, tmp_path, caplog):
+    arq = Arquivo(tmp_path)
+    s = sessao_pronta(cl)
+    s.pasta = f"{s.data}/fechamento_2238"
+    valido = arq.salvar_resultado(cl, s)
+    corrompido = valido.parent.with_name("fechamento_2200") / valido.name
+    corrompido.parent.mkdir()
+    corrompido.write_text("{", encoding="utf-8")
+    assert [registro.pasta for _, registro in arq.resultados(cl.data)] == [s.pasta]
+    assert str(corrompido) in caplog.text
+
+
+def test_gravacao_interrompida_preserva_resultado_anterior(cl, tmp_path, monkeypatch):
+    arq = Arquivo(tmp_path)
+    s = sessao_pronta(cl)
+    destino = arq.salvar_resultado(cl, s)
+    original = destino.read_bytes()
+
+    def falhar(self, novo_destino):
+        raise OSError("falha na troca")
+
+    monkeypatch.setattr(Path, "replace", falhar)
+    s.responsavel = "Outro"
+    with pytest.raises(OSError, match="falha na troca"):
+        arq.salvar_resultado(cl, s)
+    assert destino.read_bytes() == original
+    assert list(destino.parent.glob("*.tmp")) == []
 
 
 def test_retencao_remove_so_dias_antigos(tmp_path):

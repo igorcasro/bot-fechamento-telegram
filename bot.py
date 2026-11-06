@@ -12,6 +12,7 @@ import html
 import logging
 import os
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from functools import wraps
@@ -26,7 +27,7 @@ from telegram.ext import (
     PersistenceInput, PicklePersistence, filters,
 )
 
-from nucleo.arquivo import Arquivo
+from nucleo.arquivo import Arquivo, destino_atomico
 from nucleo.checklist import FOTO_NENHUMA, FOTO_OBRIGATORIA, Checklist
 from nucleo.entrega import CanalEntrega
 from nucleo import logs
@@ -154,9 +155,9 @@ def salvar(context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist) -> None
     Também guarda uma CÓPIA do checklist: editar o YAML no meio de um checklist em andamento
     não muda as etapas daquele checklist.
     """
+    ctx_de(context).arquivo.salvar_resultado(cl, s)
     context.chat_data["sessao"] = s.to_dict()
     context.chat_data["checklist"] = cl.to_dict()
-    ctx_de(context).arquivo.salvar_resultado(cl, s)
 
 
 def limpar_sessao(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -199,16 +200,16 @@ def texto_etapa(cl: Checklist, s: Sessao) -> str:
     return "\n".join(linhas)
 
 
-def teclado_status(cl: Checklist, idx: int) -> InlineKeyboardMarkup:
-    linhas = [[InlineKeyboardButton("✅ Concluído", callback_data=f"st:{idx}:c"),
-               InlineKeyboardButton("⚠️ Problema", callback_data=f"st:{idx}:p")]]
+def teclado_status(cl: Checklist, idx: int, chave: str) -> InlineKeyboardMarkup:
+    linhas = [[InlineKeyboardButton("✅ Concluído", callback_data=f"st:{idx}:c:{chave}"),
+               InlineKeyboardButton("⚠️ Problema", callback_data=f"st:{idx}:p:{chave}")]]
     if cl.etapas[idx].nao_se_aplica:
-        linhas.append([InlineKeyboardButton("➖ Não se aplica", callback_data=f"st:{idx}:n")])
+        linhas.append([InlineKeyboardButton("➖ Não se aplica", callback_data=f"st:{idx}:n:{chave}")])
     return InlineKeyboardMarkup(linhas)
 
 
-def teclado_continuar(idx: int, rotulo: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton(rotulo, callback_data=f"ct:{idx}")]])
+def teclado_continuar(idx: int, rotulo: str, chave: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton(rotulo, callback_data=f"ct:{idx}:{chave}")]])
 
 
 async def enviar_longo(msg, texto: str) -> None:
@@ -233,21 +234,21 @@ async def seguir(msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checkli
     salvar(context, s, cl)
     i = s.etapa_atual
     if fase == "status":
-        await msg.reply_html(texto_etapa(cl, s), reply_markup=teclado_status(cl, i))
+        await msg.reply_html(texto_etapa(cl, s), reply_markup=teclado_status(cl, i, s.chave))
     elif fase == "foto":
         e = cl.etapas[i]
         falta = s.fotos_faltando(cl)
         txt = f"📸 Envie {'a foto' if e.fotos == 1 else f'{falta} foto(s)'} desta etapa."
         if e.foto != FOTO_OBRIGATORIA:
             await msg.reply_text(txt + "\n(opcional)",
-                                 reply_markup=teclado_continuar(i, "Continuar sem foto ➡️"))
+                                 reply_markup=teclado_continuar(i, "Continuar sem foto ➡️", s.chave))
         else:
             await msg.reply_text(txt)
     else:  # problema
         await msg.reply_text(
             "⚠️ Descreva o problema em texto e/ou envie foto.\n"
             "Quando terminar, toque em Continuar.",
-            reply_markup=teclado_continuar(i, "Continuar ➡️"))
+            reply_markup=teclado_continuar(i, "Continuar ➡️", s.chave))
 
 
 async def iniciar(update: Update, context: ContextTypes.DEFAULT_TYPE, tipo: str) -> None:
@@ -338,7 +339,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• tipo: fechamento, abertura... Sem tipo, vale fechamento "
         "(só /hoje e /dia mostram todos).\n"
         "• hora: 18:30 (hora em que o checklist foi iniciado). Use quando houver mais de um "
-        "no mesmo dia; sem hora, vale o mais recente.\n"
+        "no mesmo dia; se a hora se repetir, copie a referência completa em /dia. "
+        "Sem hora, vale o mais recente.\n"
         "Exemplos:\n"
         "/hoje\n"
         "/dia 05/11\n"
@@ -378,8 +380,10 @@ async def cmd_finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     s, cl = par
     restantes = len(cl.etapas) - s.etapa_atual
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Sim, finalizar", callback_data="fin:s"),
-                                InlineKeyboardButton("Não", callback_data="fin:n")]])
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("Sim, finalizar", callback_data=f"fin:s:{s.chave}"),
+        InlineKeyboardButton("Não", callback_data=f"fin:n:{s.chave}"),
+    ]])
     await msg.reply_text(
         f"Finalizar agora? {restantes} etapa(s) sem resposta serão marcadas como NÃO REALIZADAS.",
         reply_markup=kb)
@@ -396,6 +400,11 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await q.edit_message_reply_markup(None)
         return
     s, cl = par
+    if partes[-1] != s.chave:
+        await q.answer("Botão de outro checklist. Use /status para ver o passo atual.",
+                       show_alert=True)
+        await q.edit_message_reply_markup(None)
+        return
 
     if partes[0] == "fin":
         await q.answer()
@@ -487,15 +496,39 @@ def nome_pdf(s: Sessao) -> str:
     return f"{s.tipo}_{s.data}_{datetime.fromisoformat(s.iniciado_em):%H%M}.pdf"
 
 
+def salvar_pdf_relatorio(ctx: Contexto, cl: Checklist, s: Sessao, destino: Path) -> None:
+    with destino_atomico(destino) as temporario:
+        gerar_relatorio_pdf(ctx.loja, cl, s, ctx.arquivo.raiz, temporario)
+
+
+def pdf_disponivel(caminho: Path) -> bool:
+    """Detecta PDFs ausentes ou truncados, inclusive os de versões antigas."""
+    try:
+        with caminho.open("rb") as arquivo:
+            if arquivo.read(5) != b"%PDF-":
+                return False
+            tamanho = arquivo.seek(0, os.SEEK_END)
+            arquivo.seek(max(0, tamanho - 1024))
+            return arquivo.read().rstrip().endswith(b"%%EOF")
+    except FileNotFoundError:
+        return False
+
+
 async def finalizar(
     msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist
 ) -> None:
     ctx = ctx_de(context)
     s.finalizar(cl, ctx.loja.agora())
-    limpar_sessao(context)
     ctx.arquivo.salvar_resultado(cl, s)
+    limpar_sessao(context)
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
-    await asyncio.to_thread(gerar_relatorio_pdf, ctx.loja, cl, s, ctx.arquivo.raiz, pdf)
+    try:
+        await asyncio.to_thread(salvar_pdf_relatorio, ctx, cl, s, pdf)
+    except Exception:
+        log.exception("Falha ao gerar o PDF de %s", s.pasta)
+        await msg.reply_text("⚠️ Checklist salvo, mas não consegui gerar o PDF. "
+                             "Avise o responsável para verificar o log e usar /reenviar.")
+        return
     resumo = resumo_texto(ctx.loja, cl, s)
 
     enviado = False
@@ -535,10 +568,10 @@ def _data_arg(txt: str, hoje: date) -> date | None:
 
 
 def _hora_arg(txt: str) -> str | None:
-    """Aceita HH:MM ou HHhMM (ex.: 22:38, 22h38) e devolve 'HH:MM'."""
-    m = re.fullmatch(r"(\d{1,2})[:hH](\d{2})", txt)
+    """Aceita HH:MM ou HHhMM, com identificador opcional após #."""
+    m = re.fullmatch(r"(\d{1,2})[:hH](\d{2})(#[0-9a-fA-F]{32})?", txt)
     if m and int(m[1]) < 24 and int(m[2]) < 60:
-        return f"{int(m[1]):02d}:{m[2]}"
+        return f"{int(m[1]):02d}:{m[2]}{(m[3] or '').lower()}"
     return None
 
 
@@ -562,6 +595,14 @@ def _hhmm(s: Sessao) -> str:
     return f"{datetime.fromisoformat(s.iniciado_em):%H:%M}"
 
 
+def _referencia(s: Sessao) -> str:
+    return f"{_hhmm(s)}#{s.chave}"
+
+
+def _filtrar_hora(salvos, hora: str | None):
+    return [par for par in salvos if hora in (None, _hhmm(par[1]), _referencia(par[1]))]
+
+
 async def _responder_tipo_invalido(msg, ctx: Contexto, tipo: str | None) -> bool:
     if tipo and tipo not in ctx.loja.tipos_disponiveis():
         await msg.reply_text(f"Tipo '{tipo}' não existe. Disponíveis: "
@@ -575,30 +616,35 @@ async def _mostrar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE, args:
     iniciados por qualquer pessoa, pois tudo é lido do arquivo)."""
     ctx, msg = ctx_de(context), update.effective_message
     d, tipo, hhmm = _args(ctx, args)
-    if await _responder_tipo_invalido(msg, ctx, tipo):
+    todos = ctx.arquivo.resultados(d, tipo)
+    if not todos and await _responder_tipo_invalido(msg, ctx, tipo):
         return
-    for t in ([tipo] if tipo else ctx.loja.tipos_disponiveis()):
+    tipos = [tipo] if tipo else sorted(set(ctx.loja.tipos_disponiveis()) | {s.tipo for _, s in todos})
+    for t in tipos:
+        por_tipo = [par for par in todos if par[1].tipo == t]
+        if por_tipo:
+            salvos = _filtrar_hora(por_tipo, hhmm)
+            if not salvos:
+                await msg.reply_text(f"{t}: nenhum checklist iniciado às {hhmm} em {data_br(d)}.")
+            contagem = Counter(_hhmm(s) for _, s in por_tipo)
+            for cl_salvo, s in salvos:
+                texto = progresso_texto(cl_salvo, s)
+                if len(por_tipo) > 1:
+                    ref = _referencia(s) if contagem[_hhmm(s)] > 1 else _hhmm(s)
+                    texto = f"🕒 Iniciado às {ref}\n{texto}"
+                await enviar_longo(msg, texto)
+            continue
         try:
             cl = ctx.loja.checklist(t).para_data(d)
-        except ValueError:
+        except (ValueError, FileNotFoundError):
             await msg.reply_text(f"{t}: erro de configuração no checklist. Avise o responsável.")
             continue
-        salvos = ctx.arquivo.resultados(d, t)
-        if hhmm:
-            salvos = [x for x in salvos if _hhmm(x[1]) == hhmm]
-        if not salvos:
-            if not cl.etapas:
-                await msg.reply_text(f"{t}: sem etapas em {data_br(d)}.")
-            elif hhmm:
-                await msg.reply_text(f"{t}: nenhum checklist iniciado às {hhmm} em {data_br(d)}.")
-            else:
-                await enviar_longo(msg, progresso_texto(cl, None))
-            continue
-        for cl_salvo, s in salvos:  # todos os do dia, com as etapas como estavam
-            texto = progresso_texto(cl_salvo, s)
-            if len(salvos) > 1:
-                texto = f"🕒 Iniciado às {_hhmm(s)}\n{texto}"
-            await enviar_longo(msg, texto)
+        if not cl.etapas:
+            await msg.reply_text(f"{t}: sem etapas em {data_br(d)}.")
+        elif hhmm:
+            await msg.reply_text(f"{t}: nenhum checklist iniciado às {hhmm} em {data_br(d)}.")
+        else:
+            await enviar_longo(msg, progresso_texto(cl, None))
 
 
 @somente_autorizados
@@ -627,7 +673,12 @@ async def cmd_imprimir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     tipo = tipo or "fechamento"
     if await _responder_tipo_invalido(msg, ctx, tipo):
         return
-    cl = ctx.loja.checklist(tipo).para_data(d)
+    try:
+        cl = ctx.loja.checklist(tipo).para_data(d)
+    except (ValueError, FileNotFoundError) as exc:
+        log.error("Checklist '%s' inválido: %s", tipo, exc)
+        await msg.reply_text(f"{tipo}: erro de configuração no checklist. Avise o responsável.")
+        return
     if not cl.etapas:
         await msg.reply_text(f"Sem etapas de {tipo} em {data_br(d)}.")
         return
@@ -643,21 +694,27 @@ async def _resultado_do_dia(
     """Checklist finalizado pedido: o iniciado em `hhmm` ou, sem hora, o mais recente.
 
     Havendo mais de um no dia, avisa os horários para escolher com /comando <hora>."""
-    salvos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
-    if hhmm:
-        salvos = [x for x in salvos if _hhmm(x[1]) == hhmm]
+    todos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
+    salvos = _filtrar_hora(todos, hhmm)
     if not salvos:
+        if not todos and await _responder_tipo_invalido(msg, ctx, tipo):
+            return None
         quando = f" iniciado às {hhmm}" if hhmm else ""
         await msg.reply_text(f"Não há resultado finalizado de {tipo}{quando} em {data_br(d)} "
                              f"(os dados ficam guardados por {ctx.retencao_dias} dias).")
         return None
-    todos = ctx.arquivo.resultados(d, tipo, apenas_finalizados=True)
+    if hhmm and len(salvos) > 1:
+        await msg.reply_text(f"Há mais de um checklist às {hhmm}. Use /dia {data_br(d)} "
+                             f"{tipo} para copiar a referência completa e usar com /{comando}.")
+        return None
     if not hhmm and len(todos) > 1:
-        horas = ", ".join(_hhmm(s) for _, s in todos)
+        contagem = Counter(_hhmm(s) for _, s in todos)
+        refs = [_referencia(s) if contagem[_hhmm(s)] > 1 else _hhmm(s) for _, s in todos]
+        horas = ", ".join(refs)
         await msg.reply_text(f"Há {len(todos)} {tipo}(s) finalizados em {data_br(d)} "
                              f"(iniciados às {horas}). Enviando o mais recente ({_hhmm(todos[-1][1])}); "
-                             f"para outro, acrescente a hora, ex.: /{comando} {data_br(d)} "
-                             f"{_hhmm(todos[0][1])}.")
+                             f"para outro, informe a referência, ex.: /{comando} {data_br(d)} "
+                             f"{tipo} {refs[0]}.")
     return salvos[-1]
 
 
@@ -666,8 +723,6 @@ async def cmd_resultado(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     ctx, msg = ctx_de(context), update.effective_message
     d, tipo, hhmm = _args(ctx, context.args or [])
     tipo = tipo or "fechamento"
-    if await _responder_tipo_invalido(msg, ctx, tipo):
-        return
     res = await _resultado_do_dia(msg, ctx, d, tipo, hhmm, "resultado")
     if not res:
         return
@@ -682,21 +737,19 @@ async def cmd_reenviar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     ctx, msg = ctx_de(context), update.effective_message
     d, tipo, hhmm = _args(ctx, context.args or [])
     tipo = tipo or "fechamento"
-    if await _responder_tipo_invalido(msg, ctx, tipo):
-        return
     res = await _resultado_do_dia(msg, ctx, d, tipo, hhmm, "reenviar")
     if not res:
         return
     cl, s = res
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
-    if not pdf.exists():
-        await asyncio.to_thread(gerar_relatorio_pdf, ctx.loja, cl, s, ctx.arquivo.raiz, pdf)
     try:
+        if not pdf_disponivel(pdf):
+            await asyncio.to_thread(salvar_pdf_relatorio, ctx, cl, s, pdf)
         for canal in ctx.canais:
             await canal.enviar(resumo_texto(ctx.loja, cl, s), pdf)
-    except Exception as exc:
+    except Exception:
         log.exception("Falha no reenvio")
-        await msg.reply_text(f"⚠️ Não consegui reenviar: {exc}")
+        await msg.reply_text("⚠️ Não consegui reenviar. Confira o log do bot.")
         return
     await msg.reply_text("✅ Relatório reenviado ao grupo.")
 
@@ -714,7 +767,7 @@ def comandos_menu(ctx: Contexto) -> list[BotCommand]:
     for tipo in ctx.loja.tipos_disponiveis():
         try:
             cl = ctx.loja.checklist(tipo)
-        except ValueError:  # YAML com erro: fica fora do menu (o erro já é logado no início)
+        except (ValueError, FileNotFoundError):
             continue
         menu.append(BotCommand(cl.comando, f"Iniciar: {cl.nome}"[:256]))
     menu += [

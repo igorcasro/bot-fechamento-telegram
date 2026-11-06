@@ -59,6 +59,10 @@ class Etapa:
     exceto: list[date] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        if not all(isinstance(texto, str) for texto in (self.titulo, self.instrucao, self.secao)):
+            raise ValueError("Título, instrução e seção da etapa devem ser textos.")
+        if not isinstance(self.nao_se_aplica, bool):
+            raise ValueError(f"Etapa '{self.titulo}': 'nao_se_aplica' deve ser true ou false.")
         if self.foto not in _FOTO_VALIDAS:
             raise ValueError(
                 f"Etapa '{self.titulo}': foto deve ser um de {sorted(_FOTO_VALIDAS)}, "
@@ -98,16 +102,25 @@ class Checklist:
     @classmethod
     def carregar(cls, path: str | Path) -> "Checklist":
         path = Path(path)
-        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        try:
+            raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+            return cls._carregar(path, raw)
+        except FileNotFoundError:
+            raise
+        except (OSError, yaml.YAMLError, ValueError, AttributeError, KeyError, TypeError) as exc:
+            raise ValueError(f"{path.name}: {exc}") from exc
+
+    @classmethod
+    def _carregar(cls, path: Path, raw: dict) -> "Checklist":
         tipo = path.stem  # o tipo é o nome do arquivo (fechamento.yaml -> "fechamento")
         if raw.get("tipo", tipo) != tipo:
             raise ValueError(
-                f"{path.name}: 'tipo' ({raw['tipo']}) deve ser igual ao nome do arquivo ({tipo})."
+                f"'tipo' ({raw['tipo']}) deve ser igual ao nome do arquivo ({tipo})."
             )
         comando = str(raw.get("comando") or COMANDOS_PADRAO.get(tipo, tipo)).lstrip("/").lower()
         if not re.fullmatch(r"[a-z0-9_]{1,32}", comando):
             raise ValueError(
-                f"{path.name}: defina 'comando:' só com letras minúsculas, números e _ "
+                "Defina 'comando:' só com letras minúsculas, números e _ "
                 f"(recebi '{comando}')."
             )
         etapas: list[Etapa] = []
@@ -115,9 +128,11 @@ class Checklist:
             for e in sec.get("etapas", []):
                 etapas.append(cls._etapa(sec.get("nome", ""), e))
         if not etapas:
-            raise ValueError(f"{path.name}: o checklist precisa ter pelo menos uma etapa.")
-        return cls(tipo=tipo, nome=raw.get("nome", tipo.capitalize()), etapas=etapas,
-                   comando=comando)
+            raise ValueError("O checklist precisa ter pelo menos uma etapa.")
+        nome = raw.get("nome", tipo.capitalize())
+        if not isinstance(nome, str):
+            raise ValueError("O nome do checklist deve ser texto.")
+        return cls(tipo=tipo, nome=nome, etapas=etapas, comando=comando)
 
     @staticmethod
     def _etapa(secao: str, e: dict) -> Etapa:
@@ -135,7 +150,7 @@ class Checklist:
             secao=secao,
             foto=e.get("foto", FOTO_OBRIGATORIA),
             fotos=int(e.get("fotos", 1)),
-            nao_se_aplica=bool(e.get("nao_se_aplica", True)),
+            nao_se_aplica=e.get("nao_se_aplica", True),
             dias=dias,
             datas=[_to_date(x) for x in e.get("datas", [])],
             exceto=[_to_date(x) for x in e.get("exceto", [])],

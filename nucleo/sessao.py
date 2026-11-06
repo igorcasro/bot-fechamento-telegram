@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from hashlib import sha256
+from uuid import uuid4
 
 from .checklist import FOTO_NENHUMA, FOTO_OPCIONAL, Checklist
 
@@ -85,9 +87,14 @@ class Sessao:
         assert cl.data is not None, "use Checklist.para_data() antes de iniciar"
         return cls(
             tipo=cl.tipo, data=cl.data.isoformat(), responsavel=responsavel,
-            iniciado_em=_iso(agora),
-            pasta=f"{cl.data.isoformat()}/{cl.tipo}_{agora:%H%M}",
+            iniciado_em=agora.isoformat(timespec="microseconds"),
+            pasta=f"{cl.data.isoformat()}/{cl.tipo}_{agora:%H%M}_{uuid4().hex}",
         )
+
+    @property
+    def chave(self) -> str:
+        """Identificador estável, inclusive para sessões gravadas antes do UUID."""
+        return sha256(self.pasta.encode("utf-8")).hexdigest()[:32]
 
     # ---- serialização (dict simples, para pickle/JSON) -----------------
     def to_dict(self) -> dict:
