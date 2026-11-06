@@ -3,7 +3,7 @@
   "4": "Arquivo",
   "6": "sessao.py",
   "7": "fixtures/lojas/divino-fogao/checklists/abertura.yaml",
-  "9": "logs.py",
+  "9": "arquivo.py",
   "12": "Loja",
   "13": "date",
   "14": "Path",
@@ -17,7 +17,7 @@
   "23": "date",
   "24": "datetime",
   "25": "fixtures/lojas/divino-fogao/checklists/fechamento.yaml",
-  "26": "entrega.py",
+  "26": "BotFalso",
   "27": "date",
   "28": "Path"
 }

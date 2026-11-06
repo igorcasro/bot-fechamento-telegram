@@ -11,6 +11,7 @@ import asyncio
 import html
 import logging
 import os
+import pickle
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -37,6 +38,7 @@ from nucleo.relatorio import ICONE, ROTULO, data_br, progresso_texto, resumo_tex
 from nucleo.sessao import EstadoInvalido, Sessao, Status
 
 BASE_DIR = Path(__file__).parent
+ESTADO = BASE_DIR / "estado.pickle"
 ENV_ENCODING = "utf-8-sig"  # tolera arquivo salvo com BOM pelo Bloco de Notas
 log = logging.getLogger("checklist-bot")
 
@@ -71,6 +73,8 @@ class TelegramEntrega:
         if not chat:
             raise RuntimeError("MANAGER_CHAT_ID não está configurado.")
         await self.bot.send_message(chat, resumo)
+        if pdf is None:
+            return
         with pdf.open("rb") as f:
             await self.bot.send_document(chat, document=f, filename=pdf.name,
                                          caption="📄 Relatório em PDF")
@@ -169,12 +173,18 @@ def carregar_sessao(context: ContextTypes.DEFAULT_TYPE) -> tuple[Sessao, Checkli
     raw = context.chat_data.get("sessao")
     if not raw:
         return None
-    s = Sessao.from_dict(raw)
-    snap = context.chat_data.get("checklist")
-    if snap:
-        cl = Checklist.from_dict(snap)
-    else:  # estado antigo, sem cópia
-        cl = ctx_de(context).loja.checklist(s.tipo).para_data(date.fromisoformat(s.data))
+    try:
+        s = Sessao.from_dict(raw)
+        snap = context.chat_data.get("checklist")
+        if snap:
+            cl = Checklist.from_dict(snap)
+        else:  # estado antigo, sem cópia
+            cl = ctx_de(context).loja.checklist(s.tipo).para_data(date.fromisoformat(s.data))
+    except (ValueError, TypeError, KeyError, FileNotFoundError):
+        # Sem isto, o chat ficaria preso: até /cancelar passa por aqui. O resultado.json fica.
+        log.exception("Sessão salva ilegível: descartada do chat")
+        limpar_sessao(context)
+        return None
     return s, cl
 
 
@@ -292,7 +302,11 @@ async def cmd_dinamico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     comando = msg.text.split()[0].lstrip("/").split("@")[0].lower()
     tipo = ctx.loja.tipo_por_comando(comando)
     if tipo is None:
-        await msg.reply_text("Não conheço esse comando. Use /start para ver os disponíveis.")
+        quebrados = [t for t, _ in ctx.loja.validar()]  # YAML com erro não revela o comando
+        extra = (f" Há checklist com erro de configuração ({', '.join(quebrados)}): "
+                 "avise o responsável." if quebrados else "")
+        await msg.reply_text(
+            "Não conheço esse comando. Use /start para ver os disponíveis." + extra)
         return
     await iniciar(update, context, tipo)
 
@@ -454,7 +468,7 @@ async def foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     idx = s.etapa_destino(gid)
     existentes = len(s.respostas[idx].fotos) if idx in s.respostas else 0
     rel, destino = ctx.arquivo.caminho_foto(s, idx, existentes + 1, f"{agora:%H%M%S}")
-    arq = await msg.photo[-1].get_file()
+    arq = await (msg.photo[-1] if msg.photo else msg.document).get_file()  # foto ou imagem como arquivo
     await arq.download_to_drive(destino)
     await asyncio.to_thread(Arquivo.reduzir_foto, destino)
 
@@ -514,6 +528,21 @@ def pdf_disponivel(caminho: Path) -> bool:
         return False
 
 
+async def _entregar(ctx: Contexto, resumo: str, pdf: Path | None) -> bool:
+    """Envia pelos canais; True só se todos aceitaram. Sem grupo configurado, False."""
+    if not (ctx.gerente_chat and ctx.canais):
+        log.warning("MANAGER_CHAT_ID não definido: relatório não enviado.")
+        return False
+    ok = True
+    for canal in ctx.canais:
+        try:
+            await canal.enviar(resumo, pdf)
+        except Exception:
+            log.exception("Falha ao enviar pelo canal %s", canal.nome)
+            ok = False
+    return ok
+
+
 async def finalizar(
     msg, context: ContextTypes.DEFAULT_TYPE, s: Sessao, cl: Checklist
 ) -> None:
@@ -522,28 +551,17 @@ async def finalizar(
     ctx.arquivo.salvar_resultado(cl, s)
     limpar_sessao(context)
     pdf = ctx.arquivo.pasta(s) / nome_pdf(s)
+    resumo = resumo_texto(ctx.loja, cl, s)
     try:
         await asyncio.to_thread(salvar_pdf_relatorio, ctx, cl, s, pdf)
     except Exception:
         log.exception("Falha ao gerar o PDF de %s", s.pasta)
+        await _entregar(ctx, resumo + "\n\n⚠️ O PDF não foi gerado; será enviado com /reenviar.", None)
         await msg.reply_text("⚠️ Checklist salvo, mas não consegui gerar o PDF. "
                              "Avise o responsável para verificar o log e usar /reenviar.")
         return
-    resumo = resumo_texto(ctx.loja, cl, s)
 
-    enviado = False
-    if ctx.gerente_chat and ctx.canais:
-        enviado = True
-        for canal in ctx.canais:
-            try:
-                await canal.enviar(resumo, pdf)
-            except Exception:
-                log.exception("Falha ao enviar pelo canal %s", canal.nome)
-                enviado = False
-    else:
-        log.warning("MANAGER_CHAT_ID não definido: relatório não enviado.")
-
-    if enviado:
+    if await _entregar(ctx, resumo, pdf):
         await msg.reply_text(
             "🎉 Checklist concluído! O relatório (resumo e PDF) foi enviado ao grupo. Obrigado!")
     else:  # não perder a informação: mostra o resumo aqui e avisa
@@ -792,12 +810,28 @@ async def publicar_menu(app: Application) -> None:
         log.warning("Não consegui publicar o menu de comandos no Telegram.", exc_info=True)
 
 
+def isolar_estado_corrompido(caminho: Path) -> None:
+    """Pickle truncado (queda no meio da gravação) impediria o bot de subir, em laço, para sempre."""
+    try:
+        with caminho.open("rb") as f:
+            pickle.load(f)
+    except FileNotFoundError:
+        return
+    except Exception:
+        destino = caminho.with_name(caminho.name + ".corrompido")
+        caminho.replace(destino)
+        log.error("%s estava corrompido; movido para %s. Checklists em andamento "
+                  "precisam ser reiniciados.", caminho.name, destino.name)
+
+
 def build_app(token: str, ctx: Contexto) -> Application:
+    isolar_estado_corrompido(ESTADO)
     persistence = PicklePersistence(
-        filepath=BASE_DIR / "estado.pickle",
+        filepath=ESTADO, update_interval=1,  # padrão é 60 s: uma queda perderia as últimas respostas
         store_data=PersistenceInput(bot_data=False, user_data=False, callback_data=False),
     )
     app = (Application.builder().token(token).persistence(persistence)
+           .media_write_timeout(120)  # padrão 20 s: PDF com fotos estoura no Wi-Fi lento
            .post_init(publicar_menu).build())
     app.bot_data["ctx"] = ctx
     ctx.canais.append(TelegramEntrega(app.bot, ctx))
@@ -808,7 +842,7 @@ def build_app(token: str, ctx: Contexto) -> Application:
                      ("reenviar", cmd_reenviar)]:
         app.add_handler(CommandHandler(nome, fn))
     app.add_handler(CallbackQueryHandler(botao, pattern=r"^(st|ct|fin):"))
-    app.add_handler(MessageHandler(filters.PHOTO, foto))
+    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, texto_solto))
     # por último: /fechar, /abrir e qualquer comando definido nos YAMLs
     app.add_handler(MessageHandler(filters.COMMAND, cmd_dinamico))

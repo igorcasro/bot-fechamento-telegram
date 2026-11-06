@@ -7,6 +7,7 @@ from .checklist import DIAS_SEMANA_LONGO, Checklist
 from .loja import Loja
 from .sessao import Sessao, Status
 
+LIMITE_RESUMO = 3900
 ICONE = {
     Status.CONCLUIDO: "✅", Status.PROBLEMA: "⚠️",
     Status.NAO_SE_APLICA: "➖", Status.NAO_REALIZADO: "⏳",
@@ -54,7 +55,10 @@ def resumo_texto(loja: Loja, cl: Checklist, s: Sessao) -> str:
             linhas.append(f"⏳ {cl.etapas[i].titulo} - não realizada")
     else:
         linhas += ["", "Tudo certo, nenhuma pendência. 👏"]
-    return "\n".join(linhas)
+    txt = "\n".join(linhas)
+    if len(txt) > LIMITE_RESUMO:  # o Telegram recusa mensagens acima de 4096 caracteres
+        txt = txt[:LIMITE_RESUMO].rstrip() + "\n… (lista completa no PDF)"
+    return txt
 
 
 def progresso_texto(cl: Checklist, s: Sessao | None) -> str:

@@ -102,3 +102,17 @@ def test_reduzir_foto(tmp_path):
     Image.new("RGB", (4000, 3000), "red").save(p)
     Arquivo.reduzir_foto(p)
     assert max(Image.open(p).size) == 1280
+
+
+def test_resumo_nunca_passa_do_limite_do_telegram(loja):
+    from nucleo.checklist import Checklist, Etapa
+    cl = Checklist(tipo="fechamento", nome="Fechamento", data=date(2026, 11, 3),
+                   etapas=[Etapa(f"Etapa {i}", foto="nenhuma") for i in range(21)])
+    s = Sessao.nova(cl, "Arilson", hora(22, 0))
+    for _ in cl.etapas:
+        s.responder(cl, Status.PROBLEMA, hora(22, 1))
+        s.add_obs(cl, "x" * 250)
+        s.continuar(cl)
+    s.finalizar(cl, hora(22, 30))
+    txt = resumo_texto(loja, cl, s)
+    assert len(txt) <= 4096 and txt.endswith("(lista completa no PDF)")

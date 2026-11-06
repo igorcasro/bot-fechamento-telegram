@@ -12,6 +12,6 @@ from typing import Protocol
 class CanalEntrega(Protocol):
     nome: str
 
-    async def enviar(self, resumo: str, pdf: Path) -> None:
-        """Entrega o resumo (texto) e o PDF. Deve levantar exceção se falhar."""
+    async def enviar(self, resumo: str, pdf: Path | None) -> None:
+        """Entrega o resumo (texto) e o PDF (None = só o texto). Deve levantar exceção se falhar."""
         ...

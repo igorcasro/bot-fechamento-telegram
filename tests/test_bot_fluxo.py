@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import pytest
 from PIL import Image
 
 import bot
@@ -42,16 +43,21 @@ class BotFalso:
         raise AssertionError(f"O bot não deveria chamar {nome}")
 
 
-def novo_msg(chat_id=1, text=None, photo=False, caption=None, gid=None):
+def novo_msg(chat_id=1, text=None, photo=False, caption=None, gid=None, como_arquivo=False):
     msg = SimpleNamespace(
         chat_id=chat_id, text=text, caption=caption, media_group_id=gid, text_html="etapa",
         reply_text=AsyncMock(), reply_html=AsyncMock(), reply_document=AsyncMock(), photo=[],
+        document=None,
     )
     if photo:
         async def baixar(destino):
             Image.new("RGB", (800, 1400), (60, 80, 100)).save(destino)
         arq = SimpleNamespace(download_to_drive=baixar)
-        msg.photo = [SimpleNamespace(get_file=AsyncMock(return_value=arq))]
+        item = SimpleNamespace(get_file=AsyncMock(return_value=arq))
+        if como_arquivo:  # imagem enviada "sem compressão": chega como documento
+            msg.document = item
+        else:
+            msg.photo = [item]
     return msg
 
 
@@ -416,13 +422,16 @@ def test_pdf_incompleto_e_regenerado_no_reenvio(loja, tmp_path, monkeypatch):
         msg, _ = chat.clicar("fin:s")
     assert "Checklist salvo" in msg.reply_text.await_args.args[0]
     assert chat.sessao is None and not destino.exists()
+    # o grupo recebe ao menos o resumo em texto, avisando que o PDF virá depois
+    (texto, anexo), = chat.canal.enviados
+    assert anexo is None and "/reenviar" in texto and "Fechamento" in texto
     chat.comando("reenviar")
     assert destino.read_bytes().startswith(b"%PDF")
-    assert len(chat.canal.enviados) == 1
+    assert len(chat.canal.enviados) == 2
     destino.write_bytes(b"%PDF-1.4\ntruncado")
     chat.comando("reenviar")
     assert destino.read_bytes().rstrip().endswith(b"%%EOF")
-    assert len(chat.canal.enviados) == 2
+    assert len(chat.canal.enviados) == 3
 
 
 def test_historico_funciona_com_yaml_invalido(loja, tmp_path):
@@ -532,3 +541,80 @@ def test_publicar_menu_nao_derruba_o_bot_se_o_telegram_falhar(loja, tmp_path):
     bot_ok.set_my_commands.assert_awaited_once()
     bot_mau = SimpleNamespace(set_my_commands=AsyncMock(side_effect=RuntimeError("sem rede")))
     asyncio.run(bot.publicar_menu(SimpleNamespace(bot=bot_mau, bot_data={"ctx": ctx})))
+
+
+# ------------------------------------------------------------------ correções da auditoria
+def test_falha_ao_gravar_json_ao_finalizar_preserva_a_sessao(loja, tmp_path, monkeypatch):
+    chat = Chat(novo_ctx(loja, tmp_path))
+    chat.comando("fechar")
+    chat.clicar("st:0:c")
+    chat.foto()
+    chat.comando("finalizar")
+
+    def falhar(self, cl, s):
+        raise OSError("disco cheio")
+
+    with monkeypatch.context() as m:
+        m.setattr(Arquivo, "salvar_resultado", falhar)
+        with pytest.raises(OSError):
+            chat.clicar("fin:s")
+    assert chat.sessao is not None and chat.sessao.etapa_atual == 1  # nada se perdeu
+    assert chat.canal.enviados == []
+    chat.comando("finalizar")
+    chat.clicar("fin:s")  # com o disco de volta, conclui normalmente
+    assert chat.sessao is None and len(chat.canal.enviados) == 1
+
+
+def test_sessao_ilegivel_nao_prende_o_chat(loja, tmp_path):
+    loja2 = copia_loja(loja, tmp_path)
+    chat = Chat(novo_ctx(loja2, tmp_path))
+    chat.comando("fechar")
+    chat.context.chat_data.pop("checklist")  # estado antigo, sem a cópia do checklist...
+    (loja2.pasta / "checklists" / "fechamento.yaml").write_text("secoes: [", encoding="utf-8")
+    assert chat.sessao is None  # ...e o YAML quebrado: descarta em vez de falhar sempre
+    assert "Nenhum checklist" in chat.comando("cancelar").reply_text.await_args.args[0]
+    (loja2.pasta / "checklists" / "fechamento.yaml").write_text(
+        "nome: F\nsecoes:\n  - nome: A\n    etapas:\n      - titulo: X\n", encoding="utf-8")
+    chat.comando("fechar")
+    assert chat.sessao is not None
+
+
+def test_imagem_enviada_como_arquivo_conta_como_foto(loja, tmp_path):
+    chat = Chat(novo_ctx(loja, tmp_path))
+    chat.comando("fechar")
+    chat.clicar("st:0:c")
+    chat.foto(como_arquivo=True)
+    assert chat.sessao.etapa_atual == 1 and chat.sessao.total_fotos() == 1
+    # e o Telegram entrega esse documento ao mesmo handler das fotos
+    from telegram import Update
+    upd = Update.de_json({"update_id": 1, "message": {
+        "message_id": 1, "date": 0, "chat": {"id": 1, "type": "private"},
+        "from": {"id": 7, "is_bot": False, "first_name": "x"},
+        "document": {"file_id": "a", "file_unique_id": "b", "mime_type": "image/jpeg"}}}, None)
+    app = bot.build_app("123:abc", novo_ctx(loja, tmp_path))
+    handlers = [h for h in app.handlers[0] if getattr(h, "callback", None) is bot.foto]
+    assert handlers and handlers[0].check_update(upd)
+
+
+def test_comando_proprio_com_yaml_quebrado_avisa_erro_de_configuracao(loja, tmp_path):
+    loja2 = copia_loja(loja, tmp_path)
+    (loja2.pasta / "checklists" / "limpeza.yaml").write_text(
+        "comando: limpar_tudo\nsecoes:\n  - etapas:\n      - titulo: X\n        foto: talvez\n",
+        encoding="utf-8")
+    chat = Chat(novo_ctx(loja2, tmp_path))
+    txt = chat.comando("limpar_tudo").reply_text.await_args.args[0]
+    assert "erro de configuração" in txt and "limpeza" in txt
+
+
+def test_estado_corrompido_nao_impede_o_bot_de_subir(loja, tmp_path, monkeypatch):
+    import pickle
+    estado = tmp_path / "estado.pickle"
+    monkeypatch.setattr(bot, "ESTADO", estado)
+    estado.write_bytes(pickle.dumps({"chat_data": {1: {"x": 1}}}))
+    app = bot.build_app("123:abc", novo_ctx(loja, tmp_path))
+    assert estado.exists()  # arquivo válido não é mexido
+    assert app.persistence.update_interval == 1
+    assert app.bot.request._media_write_timeout == 120
+    estado.write_bytes(pickle.dumps({"chat_data": {}})[:-5])  # gravação cortada no meio
+    bot.build_app("123:abc", novo_ctx(loja, tmp_path))
+    assert not estado.exists() and (tmp_path / "estado.pickle.corrompido").exists()
