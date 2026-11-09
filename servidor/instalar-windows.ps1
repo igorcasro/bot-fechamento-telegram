@@ -16,7 +16,10 @@ $Bat = Join-Path $PSScriptRoot "iniciar-bot.bat"
 $Python = Join-Path $Raiz ".venv\Scripts\python.exe"
 
 Write-Host "Pasta do projeto: $Raiz"
-if (-not (Test-Path (Join-Path $Raiz ".env")))  { throw "Falta o arquivo .env em $Raiz (copie o .env.example e preencha)." }
+$EnvExterno = Join-Path (Split-Path -Parent $Raiz) "bot-config\.env"
+if (-not ((Test-Path (Join-Path $Raiz ".env")) -or (Test-Path $EnvExterno) -or $env:BOT_ENV_FILE)) {
+    throw "Falta o arquivo .env em $Raiz ou $EnvExterno (copie o .env.example e preencha)."
+}
 if (-not (Test-Path $Python))                   { throw "Falta o ambiente virtual em $Raiz\.venv (veja o guia, passo 'Instalar as dependencias')." }
 
 # 1) Tarefa: roda ao ligar o Windows, como SYSTEM (nao depende de ninguem estar logado),

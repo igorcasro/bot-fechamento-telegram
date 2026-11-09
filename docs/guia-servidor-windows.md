@@ -146,6 +146,12 @@ A instalação leva 1 a 2 minutos. **Verifique:** no final deve aparecer
 
 ## 5. Configurar o arquivo `.env`
 
+O bot usa `C:\bot-fechamento\.env` quando ele existe. Se só existir
+`C:\bot-config\.env`, o bot usa esse arquivo. Para manter ambos e escolher o externo
+explicitamente, acrescente `BOT_ENV_FILE=C:/bot-config/.env` ao arquivo da pasta do código.
+O arquivo externo deve conter toda a configuração, incluindo `BOT_TOKEN`. Reinicie a tarefa
+uma vez para trocar o caminho. O log registra o caminho ativo na partida.
+
 ```bash
 copy .env.example .env
 notepad .env
@@ -160,7 +166,9 @@ MANAGER_CHAT_ID=-1001234567890
 ```
 
 - `ALLOWED_USER_IDS`: IDs de **quem pode usar o bot**, separados por vírgula. Vazio = ninguém usa.
-- `MANAGER_CHAT_ID`: ID do grupo que recebe o resumo e o PDF (número **negativo**).
+- `MANAGER_CHAT_ID`: envie `/id@NomeDoBot` no grupo e use o **ID deste chat**, com o sinal
+  negativo. Para receber em particular, a pessoa deve abrir o chat privado do bot, enviar
+  `/start` ou `/id` e usar o **ID deste chat** exibido ali.
 
 Salve com **Ctrl+S**. (Se o Bloco de Notas não deixar salvar, feche e abra de novo com
 **botão direito → Executar como administrador**.)

@@ -46,6 +46,17 @@ STATUS_BOTAO = {"c": Status.CONCLUIDO, "p": Status.PROBLEMA, "n": Status.NAO_SE_
 
 
 # ------------------------------------------------------------------ contexto
+def caminho_env() -> Path:
+    local = BASE_DIR / ".env"
+    caminho = os.getenv("BOT_ENV_FILE")
+    if not caminho and local.is_file():
+        caminho = dotenv_values(local, encoding=ENV_ENCODING).get("BOT_ENV_FILE")
+    if caminho:
+        return BASE_DIR / caminho
+    externo = BASE_DIR.parent / "bot-config" / ".env"
+    return externo if not local.is_file() and externo.is_file() else local
+
+
 def parse_ids(txt: str) -> set[int]:
     """'111, 222,abc' -> {111, 222} (valores inválidos são ignorados com aviso)."""
     ids = set()
@@ -68,15 +79,16 @@ class TelegramEntrega:
     def __init__(self, bot, ctx: "Contexto"):
         self.bot, self.ctx = bot, ctx
 
-    async def enviar(self, resumo: str, pdf: Path) -> None:
+    async def enviar(self, resumo: str, pdf: Path | None) -> None:
         chat = self.ctx.gerente_chat  # lido na hora: trocar o grupo no .env vale sem reiniciar
         if not chat:
             raise RuntimeError("MANAGER_CHAT_ID não está configurado.")
-        await self.bot.send_message(chat, resumo)
+        destino = int(chat) if re.fullmatch(r"-?[0-9]+", chat) else chat
+        await self.bot.send_message(destino, resumo)
         if pdf is None:
             return
         with pdf.open("rb") as f:
-            await self.bot.send_document(chat, document=f, filename=pdf.name,
+            await self.bot.send_document(destino, document=f, filename=pdf.name,
                                          caption="📄 Relatório em PDF")
 
 
@@ -92,19 +104,19 @@ class Contexto:
     _env_mtime: float = 0.0
 
     @classmethod
-    def do_ambiente(cls) -> "Contexto":
+    def do_ambiente(cls, env: Path | None = None) -> "Contexto":
         loja = Loja.carregar(os.getenv("LOJAS_DIR", BASE_DIR / "lojas"),
                              os.getenv("LOJA", "divino-fogao"))
         arquivo = Arquivo(Path(os.getenv("ARCHIVE_DIR", BASE_DIR / "arquivo")) / loja.id)
-        env = BASE_DIR / ".env"
+        env = env if env is not None else caminho_env()
         ctx = cls(
             loja=loja, arquivo=arquivo, gerente_chat=os.getenv("MANAGER_CHAT_ID") or None,
             permitidos=parse_ids(os.getenv("ALLOWED_USER_IDS", "")),
             retencao_dias=int(os.getenv("RETENCAO_DIAS", "7")),
-            env_path=env if env.is_file() else None,
+            env_path=env,
         )
-        if ctx.env_path:
-            ctx._env_mtime = ctx.env_path.stat().st_mtime
+        if env.is_file():
+            ctx._env_mtime = env.stat().st_mtime
         return ctx
 
     def recarregar_env(self) -> None:
@@ -114,14 +126,14 @@ class Contexto:
         mtime = self.env_path.stat().st_mtime
         if mtime == self._env_mtime:
             return
-        self._env_mtime = mtime
         valores = dotenv_values(self.env_path, encoding=ENV_ENCODING)
         if "ALLOWED_USER_IDS" in valores:
             self.permitidos = parse_ids(valores["ALLOWED_USER_IDS"] or "")
         if "MANAGER_CHAT_ID" in valores:
             self.gerente_chat = valores["MANAGER_CHAT_ID"] or None
-        log.info(".env recarregado: %d usuário(s) com acesso; grupo do gerente: %s",
-                 len(self.permitidos), self.gerente_chat or "(não definido)")
+        self._env_mtime = mtime
+        log.info(".env recarregado (%s): %d usuário(s) com acesso; destino dos relatórios: %s",
+                 self.env_path, len(self.permitidos), self.gerente_chat or "(não definido)")
 
 
 def ctx_de(context: ContextTypes.DEFAULT_TYPE) -> Contexto:
@@ -131,7 +143,7 @@ def ctx_de(context: ContextTypes.DEFAULT_TYPE) -> Contexto:
 MSG_SEM_ACESSO = (
     "Você ainda não tem acesso aos checklists.\n"
     "Envie o número abaixo ao responsável para liberar o seu acesso:\n\n"
-    "Seu ID de usuário: {uid}"
+    "Seu ID de usuário: {uid}\nUse /id para consultar seus IDs."
 )
 
 
@@ -320,6 +332,14 @@ async def cmd_iniciar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await iniciar(update, context, context.args[0].lower())
 
 
+async def cmd_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    ctx_de(context).recarregar_env()
+    usuario = update.effective_user
+    await update.effective_message.reply_text(
+        f"Seu ID de usuário: {usuario.id if usuario else 'indisponível'}\n"
+        f"ID deste chat: {update.effective_chat.id}")
+
+
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Aberto a todos: é assim que cada pessoa descobre o ID para pedir acesso."""
     ctx, msg = ctx_de(context), update.effective_message
@@ -340,14 +360,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Olá! Eu guio os checklists do restaurante. Use-me em conversa privada.\n\n"
         + "\n".join(iniciar_cmds) + "\n"
         "/status - ver a etapa atual\n/finalizar - encerrar com o que já foi feito\n"
-        "/cancelar - cancelar o checklist atual\n\n"
+        "/cancelar - cancelar o checklist atual\n"
+        "/id - ver seu ID de usuário e o ID deste chat\n\n"
         "Acompanhamento e impressão\n"
         "(entre [ ] = opcional; entre < > = obrigatório)\n"
         "/hoje [tipo] - o que foi feito e o que falta hoje\n"
         "/dia <data> [tipo] - o mesmo para outro dia\n"
         "/imprimir [data] [tipo] - lista vazia em PDF, para imprimir\n"
         "/resultado [data] [tipo] [hora] - lista preenchida em PDF\n"
-        "/reenviar [data] [tipo] [hora] - reenvia o relatório ao grupo\n\n"
+        "/reenviar [data] [tipo] [hora] - reenvia ao destino configurado\n\n"
         "Como preencher:\n"
         "• data: 05/11 ou 05/11/2026. Sem data, vale hoje.\n"
         "• tipo: fechamento, abertura... Sem tipo, vale fechamento "
@@ -563,10 +584,10 @@ async def finalizar(
 
     if await _entregar(ctx, resumo, pdf):
         await msg.reply_text(
-            "🎉 Checklist concluído! O relatório (resumo e PDF) foi enviado ao grupo. Obrigado!")
+            "🎉 Checklist concluído! O relatório (resumo e PDF) foi enviado ao destino configurado.")
     else:  # não perder a informação: mostra o resumo aqui e avisa
         await msg.reply_text(f"🎉 Checklist concluído!\n\n{resumo}")
-        await msg.reply_text("⚠️ O relatório foi salvo, mas não consegui enviá-lo ao grupo. "
+        await msg.reply_text("⚠️ O relatório foi salvo, mas não consegui enviá-lo ao destino configurado. "
                              "Avise o responsável; depois ele pode usar /reenviar.")
     ctx.arquivo.limpar_antigos(ctx.loja.agora().date(), ctx.retencao_dias)
 
@@ -763,13 +784,14 @@ async def cmd_reenviar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         if not pdf_disponivel(pdf):
             await asyncio.to_thread(salvar_pdf_relatorio, ctx, cl, s, pdf)
-        for canal in ctx.canais:
-            await canal.enviar(resumo_texto(ctx.loja, cl, s), pdf)
     except Exception:
         log.exception("Falha no reenvio")
         await msg.reply_text("⚠️ Não consegui reenviar. Confira o log do bot.")
         return
-    await msg.reply_text("✅ Relatório reenviado ao grupo.")
+    if await _entregar(ctx, resumo_texto(ctx.loja, cl, s), pdf):
+        await msg.reply_text("✅ Relatório reenviado ao destino configurado.")
+    else:
+        await msg.reply_text("⚠️ Não consegui reenviar. Confira MANAGER_CHAT_ID e o log do bot.")
 
 
 # --------------------------------------------------------------------- main
@@ -796,7 +818,8 @@ def comandos_menu(ctx: Contexto) -> list[BotCommand]:
         BotCommand("dia", "Ver outro dia: /dia 05/11"),
         BotCommand("imprimir", "Lista vazia em PDF para imprimir"),
         BotCommand("resultado", "Lista preenchida em PDF"),
-        BotCommand("reenviar", "Reenviar o relatório ao grupo"),
+        BotCommand("reenviar", "Reenviar ao destino configurado"),
+        BotCommand("id", "Ver meu ID de usuário e o ID deste chat"),
         BotCommand("start", "Ajuda e meu ID de usuário"),
     ]
     return menu
@@ -836,6 +859,7 @@ def build_app(token: str, ctx: Contexto) -> Application:
     app.bot_data["ctx"] = ctx
     ctx.canais.append(TelegramEntrega(app.bot, ctx))
     app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("id", cmd_id))
     for nome, fn in [("iniciar", cmd_iniciar), ("status", cmd_status), ("cancelar", cmd_cancelar),
                      ("finalizar", cmd_finalizar), ("hoje", cmd_hoje), ("dia", cmd_dia),
                      ("imprimir", cmd_imprimir), ("resultado", cmd_resultado),
@@ -851,13 +875,14 @@ def build_app(token: str, ctx: Contexto) -> Application:
 
 
 def main() -> None:
-    env = BASE_DIR / ".env"
+    env = caminho_env()
     load_dotenv(env, encoding=ENV_ENCODING)
     logs.configurar(os.getenv("LOG_DIR", BASE_DIR / "logs"))
     token = os.getenv("BOT_TOKEN")
     if not token:
-        raise SystemExit("Defina BOT_TOKEN no arquivo .env (veja .env.example).")
-    ctx = Contexto.do_ambiente()
+        raise SystemExit(f"Defina BOT_TOKEN em {env} (veja .env.example).")
+    ctx = Contexto.do_ambiente(env)
+    log.info("Arquivo de configuração: %s", env)
     removidos = ctx.arquivo.limpar_antigos(ctx.loja.agora().date(), ctx.retencao_dias)
     if removidos:
         log.info("Arquivo: removidos dias antigos %s", removidos)

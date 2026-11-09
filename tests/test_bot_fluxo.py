@@ -62,7 +62,7 @@ def novo_msg(chat_id=1, text=None, photo=False, caption=None, gid=None, como_arq
 
 
 HANDLERS = {
-    "start": bot.cmd_start, "status": bot.cmd_status, "finalizar": bot.cmd_finalizar,
+    "start": bot.cmd_start, "id": bot.cmd_id, "status": bot.cmd_status, "finalizar": bot.cmd_finalizar,
     "cancelar": bot.cmd_cancelar, "hoje": bot.cmd_hoje, "dia": bot.cmd_dia,
     "imprimir": bot.cmd_imprimir, "resultado": bot.cmd_resultado, "reenviar": bot.cmd_reenviar,
 }
@@ -170,7 +170,7 @@ def test_fechamento_completo(loja, tmp_path):
     assert len(chat.ctx.arquivo.resultados(loja.agora().date(), FECHAMENTO)) == 1
     # o funcionário recebe só uma confirmação curta (o resumo vai para o grupo)
     respostas = [c.args[0] for c in chat.msgs[-1].reply_text.await_args_list]
-    assert any("enviado ao grupo" in r for r in respostas)
+    assert any("enviado ao destino configurado" in r for r in respostas)
     assert not any("concluídas" in r for r in respostas)
 
 
@@ -183,7 +183,7 @@ def test_fotos_so_no_pdf_nunca_na_conversa(loja, tmp_path):
 
     # grupo: 1 texto + 1 documento PDF; nenhuma foto/álbum
     assert [c[0] for c in bot_falso.chamadas] == ["send_message", "send_document"]
-    assert bot_falso.chamadas[0][1] == bot_falso.chamadas[1][1] == "-100"
+    assert bot_falso.chamadas[0][1] == bot_falso.chamadas[1][1] == -100
     assert bot_falso.chamadas[1][2].endswith(".pdf") and bot_falso.chamadas[1][3] == b"%PDF"
     # conversa do funcionário: nenhuma mensagem devolveu foto ou documento
     assert all(m.reply_document.await_count == 0 for m in chat.msgs)
@@ -469,7 +469,7 @@ def test_sem_grupo_configurado_mostra_resumo_ao_funcionario(loja, tmp_path):
     chat.comando("finalizar")
     chat.clicar("fin:s")
     textos = " ".join(c.args[0] for c in chat.msgs[-1].reply_text.await_args_list)
-    assert "não consegui enviá-lo ao grupo" in textos and "21 não realizadas" in textos
+    assert "não consegui enviá-lo ao destino configurado" in textos and "21 não realizadas" in textos
     assert chat.canal.enviados == []
 
 
@@ -529,9 +529,43 @@ def test_menu_de_comandos_inclui_checklists_do_yaml_e_comandos_fixos(loja, tmp_p
     menu = bot.comandos_menu(novo_ctx(loja2, tmp_path))
     nomes = [c.command for c in menu]
     assert {"fechar", "abrir"} <= set(nomes)
-    assert {"hoje", "imprimir", "resultado", "start"} <= set(nomes)
+    assert {"hoje", "imprimir", "resultado", "start", "id"} <= set(nomes)
     assert len(nomes) == len(set(nomes)) and len(nomes) <= 100
     assert all(1 <= len(c.description) <= 256 for c in menu)
+
+
+def test_id_aberto_em_grupo_e_no_privado(loja, tmp_path):
+    ctx = novo_ctx(loja, tmp_path, permitidos=[])
+    for tipo, chat_id in (("group", -100), ("private", 99)):
+        chat = Chat(ctx, user_id=99, tipo=tipo, chat_id=chat_id)
+        texto = chat.comando("id").reply_text.await_args.args[0]
+        assert "Seu ID de usuário: 99" in texto
+        assert f"ID deste chat: {chat_id}" in texto
+
+
+def test_env_externo_recarrega_destino_privado(loja, tmp_path, monkeypatch):
+    raiz = tmp_path / "bot-fechamento"
+    raiz.mkdir()
+    env = tmp_path / "bot-config" / ".env"
+    env.parent.mkdir()
+    env.write_text("MANAGER_CHAT_ID=-100\n", encoding="utf-8")
+    monkeypatch.setattr(bot, "BASE_DIR", raiz)
+    monkeypatch.delenv("BOT_ENV_FILE", raising=False)
+    monkeypatch.setenv("LOJAS_DIR", str(loja.pasta.parent))
+    monkeypatch.setenv("MANAGER_CHAT_ID", "-100")
+    assert bot.caminho_env() == env
+    (raiz / ".env").write_text(f'BOT_ENV_FILE="{env.as_posix()}"\n', encoding="utf-8")
+    ctx = bot.Contexto.do_ambiente()
+    assert ctx.env_path == env
+    env.write_text("MANAGER_CHAT_ID=99\n", encoding="utf-8")
+    alterado = env.stat().st_mtime + 10
+    os.utime(env, (alterado, alterado))
+    Chat(ctx, user_id=99, chat_id=99).comando("id")
+    telegram = BotFalso()
+    pdf = tmp_path / "relatorio.pdf"
+    pdf.write_bytes(b"%PDF")
+    asyncio.run(bot.TelegramEntrega(telegram, ctx).enviar("Resumo", pdf))
+    assert [chamada[1] for chamada in telegram.chamadas] == [99, 99]
 
 
 def test_publicar_menu_nao_derruba_o_bot_se_o_telegram_falhar(loja, tmp_path):
